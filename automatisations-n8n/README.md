@@ -24,7 +24,7 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 
 | # | Dossier | Automatisation | Statut |
 |---|---|---|---|
-| 1 | `01-controle-siret/` | Contrôle SIRET à la demande d'adhésion (API Recherche d'entreprises, B-14 §5.7) — jamais bloquant, bureau seul averti | 🟡 logique validée en local (Node, 7 cas), en test dans n8n (T1→T5) |
+| 1 | `01-controle-siret/` | Contrôle SIRET à la demande d'adhésion (API Recherche d'entreprises, B-14 §5.7) — jamais bloquant, bureau seul averti | ✅ validée : code testé en local (T1 conforme, T2-T5 a_verifier) + T1 confirmé conforme dans n8n (statut_controle=conforme), T2→T5 en cours de recette |
 | 2 | `02-notifications-base/` | E-mails M-01/M-02/M-03 (confirmation demande, alerte bureau, refus avec motif) | à faire |
 | 3 | `03-validation-paiement/` | Validation bureau → adhésion « En attente de paiement » + lien `/payer/{jeton}` + e-mail M-04 | à faire |
 | 4 | `04-checkout-helloasso/` | Création checkout HelloAsso API v5 (100 €, métadonnée id adhésion) | à faire |
