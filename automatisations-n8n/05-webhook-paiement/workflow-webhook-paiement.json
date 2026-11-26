@@ -14,9 +14,9 @@
         -1120,
         64
       ],
-      "id": "142fcfb3-7fa6-4487-bf12-3e5ed100c9f3",
+      "id": "14eeb5b0-7fd0-41cf-b234-541fb02a9a15",
       "name": "Webhook",
-      "webhookId": "5c1cade3-c0c4-472a-b63a-e2b5d97b8ed1"
+      "webhookId": "77541ca8-384b-418f-91e6-aae01215ec14"
     },
     {
       "parameters": {
@@ -49,7 +49,7 @@
         -672,
         64
       ],
-      "id": "8fd6c574-a0f8-47e8-8f16-104e5ecb87d5",
+      "id": "5c8fd36a-c65a-4aa8-80e6-ffc11da39700",
       "name": "Paiement à traiter ?"
     },
     {
@@ -79,7 +79,7 @@
         -432,
         -224
       ],
-      "id": "e79da1de-9755-4976-bed8-202b44a379f2",
+      "id": "11b9c6e5-429e-41f9-8995-511b6bf63ca3",
       "name": "PLACEHOLDER - Événement déjà traité ?",
       "onError": "continueRegularOutput"
     },
@@ -114,7 +114,7 @@
         -208,
         -224
       ],
-      "id": "b7fe3909-7b02-45cb-a26d-653116fc6e43",
+      "id": "162bcaa9-00f9-4838-baea-c625ed370e67",
       "name": "Déjà traité ?"
     },
     {
@@ -140,7 +140,7 @@
         16,
         -128
       ],
-      "id": "bfa8d293-183d-4374-87e7-ddeda791a973",
+      "id": "c1e7eb20-5d8f-4f74-9bb2-02d8f19dea27",
       "name": "Token OAuth2 HelloAsso",
       "onError": "continueRegularOutput"
     },
@@ -171,7 +171,7 @@
         240,
         -128
       ],
-      "id": "cd7c937a-d67e-46ab-bdd2-e290a3ce4cff",
+      "id": "f349ec28-23ec-4f70-ae77-957381cbbe16",
       "name": "Relire le paiement HelloAsso",
       "onError": "continueRegularOutput"
     },
@@ -206,7 +206,7 @@
         464,
         -128
       ],
-      "id": "19154a2e-4836-473e-b1e1-b26851f931e3",
+      "id": "94a88d8e-1130-40ca-8d59-e03076ccf1fd",
       "name": "Paiement autorisé  ?"
     },
     {
@@ -236,7 +236,7 @@
         672,
         -288
       ],
-      "id": "1670f6ad-be6b-4477-b24a-90f5c265db65",
+      "id": "c6d2c412-b02b-4b30-9d66-ecf96d69e237",
       "name": "Lire la commande HelloAsso",
       "onError": "continueRegularOutput"
     },
@@ -251,7 +251,7 @@
         -896,
         64
       ],
-      "id": "b2aea012-81a7-4cd2-8723-b2e0eb1ee1ee",
+      "id": "51f86158-0043-4c49-a9ca-0c3db1aea0b1",
       "name": "Extraire l'événement"
     },
     {
@@ -265,7 +265,7 @@
         896,
         -288
       ],
-      "id": "2e811d82-580b-4776-9542-fdb5d010ae37",
+      "id": "4d04e96b-530a-48f9-ae6d-38f621a912a6",
       "name": "Assembler le contexte"
     },
     {
@@ -303,7 +303,7 @@
         1264,
         -288
       ],
-      "id": "758f17de-c1dc-4c66-ad42-e682353fb105",
+      "id": "b09ccdcb-081b-43c3-8552-8d67374ea44b",
       "name": "PLACEHOLDER - Enregistrer l'événement de paiement",
       "onError": "continueRegularOutput"
     },
@@ -319,7 +319,7 @@
         1056,
         -448
       ],
-      "id": "efa651f1-5e09-447b-9cc7-e283f90c006c",
+      "id": "71406109-9ef4-4b0b-aafe-eb4c2796c3c7",
       "name": "Sticky Note"
     },
     {
@@ -337,7 +337,7 @@
         1680,
         -288
       ],
-      "id": "8f070626-1070-4d3a-8e8e-a8f6afba270a",
+      "id": "eb22e6a9-a021-4039-bf15-49f47e860aa0",
       "name": "M-05 Bienvenue - PLACEHOLDER SMTP",
       "webhookId": "119d3951-c616-4885-9ecb-17feee816c82",
       "credentials": {
@@ -351,7 +351,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"ignore\": true, \"eventType\": $('Extraire l\\'événement').item.json.eventType }",
+        "responseBody": "={{ JSON.stringify({ ignore: true, eventType: $('Extraire l\\'événement').item.json.eventType }) }}",
         "options": {
           "responseCode": 200
         }
@@ -362,13 +362,13 @@
         -672,
         384
       ],
-      "id": "a4a5575d-3fec-4805-92bd-0f1967d48fb5",
+      "id": "2cb61528-5c0a-4d3d-898f-36c4a91f31cd",
       "name": "200 - ignoré"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"deja_traite\": true, \"helloasso_event_id\": $('Extraire l\\'événement').item.json.payment_id }",
+        "responseBody": "={{ JSON.stringify({ deja_traite: true, helloasso_event_id: $('Extraire l\\'événement').item.json.payment_id }) }}",
         "options": {
           "responseCode": 200
         }
@@ -379,13 +379,13 @@
         -208,
         -480
       ],
-      "id": "43672aa2-4cc6-4c2b-ab86-067a13f18467",
+      "id": "49fb062c-f02e-4af6-89ff-c7ef4c52b92c",
       "name": "200 - déjà traité"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"traite\": true, \"helloasso_event_id\": $('Assembler le contexte').item.json.payment_id }",
+        "responseBody": "={{ JSON.stringify({ traite: true, helloasso_event_id: $('Assembler le contexte').item.json.payment_id }) }}",
         "options": {
           "responseCode": 200
         }
@@ -396,7 +396,7 @@
         1920,
         -288
       ],
-      "id": "ff69c796-cbf6-46e5-9186-f3fd7740086c",
+      "id": "9594332e-b1d5-4177-b5ee-08cbef8c4db7",
       "name": "200 - paiement traité"
     }
   ],
@@ -566,6 +566,6 @@
     "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
   },
   "nodeGroups": [],
-  "id": "65d3584b-044b-4f1b-8068-bd58b5d72f28",
+  "id": "32933e02-b279-4463-8e06-598117918cd0",
   "tags": []
 }
