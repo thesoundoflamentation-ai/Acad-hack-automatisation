@@ -179,7 +179,19 @@ Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/helloasso-webhook
 
 → **Dé-épingle** (Pin → Clear) après les tests.
 
-**Sans l'onglet Pin** : remplace temporairement chaque GET à simuler par un nœud **Code** `FAUX GET` qui `return { json: <réponse fictive> };` (ex. `return { json: { data: [] } };`), teste, puis remets les vrais nœuds. Ne laisse aucun nœud de test dans l'export final.
+**Sans l'onglet Pin (version gratuite) — méthode FAUX GET pour P1/P2** : remplace temporairement chaque GET à simuler par un nœud **Code portant exactement le même nom** que le nœud HTTP remplacé (sinon les références `$('...')` en aval cassent) :
+
+- `PLACEHOLDER - Événement déjà traité ?` :
+  - P1 : `return { json: { data: [] } };`
+  - P2 : `return { json: { data: [{ id: "E1", statut: "traite" }] } };`
+- `Relire le paiement HelloAsso` (P1 uniquement) : `return { json: { id: 987654, orderId: 123456, amount: 10000, initialAmount: 10000, state: "Authorized", date: "2026-11-26T10:00:00+01:00" } };`
+- `Lire la commande HelloAsso` (P1 uniquement) : `return { json: { id: 123456, payer: { email: "commercant@test.fr", firstName: "Youssef", lastName: "Abdelli" } } };`
+
+→ Save → reclique **Listen for test event** → lance le test → vérifie dans **Executions** → puis **remets les vrais nœuds HTTP** (ou réimporte `workflow-webhook-paiement-corrige.json`) et Save. Ne laisse aucun nœud FAUX GET dans l'export final.
+
+**Résultats attendus** : P3 → `{"ignore":true,"eventType":"Order"}` ; P2 (faux GET « déjà traité ») → `{"deja_traite":true,"helloasso_event_id":"987654"}` et `Relire le paiement HelloAsso` **non exécuté** dans Executions ; P1 (3 faux GET) → `{"traite":true,"helloasso_event_id":"987654"}`, avec dans Executions le POST événement (`helloasso_event_id:"987654"`, `montant_centimes:10000`, `statut:"traite"`, `adhesion_id:"D10"`) et M-05 vers `commercant@test.fr`. Sans aucun faux GET (placeholders seuls) : P1/P2 → `{"ignore":true,"eventType":"Payment"}` — comportement normal tant qu'il n'y a pas de vraies clés HelloAsso.
+
+⚠️ Si le terminal renvoie `{"message":"Error in workflow"}` (HTTP 500) : l'exécution est morte **avant** un nœud Respond to Webhook → branche non branchée ou nœud en erreur sans On Error Continue. Voir la règle 11 dans `../REGLES-ERREURS-n8n.md`.
 
 ## Fichier de corrections (intermédiaire)
 
