@@ -179,13 +179,13 @@ Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/helloasso-webhook
 
 → **Dé-épingle** (Pin → Clear) après les tests.
 
-**Sans l'onglet Pin (version gratuite) — méthode FAUX GET pour P1/P2** : remplace temporairement chaque GET à simuler par un nœud **Code portant exactement le même nom** que le nœud HTTP remplacé (sinon les références `$('...')` en aval cassent) :
+**Sans l'onglet Pin (version gratuite) — méthode FAUX GET pour P1/P2** : remplace temporairement chaque GET à simuler par un nœud **Code portant exactement le même nom** que le nœud HTTP remplacé (sinon les références `$('...')` en aval cassent). ⚠️ Le champ **JavaScript** du nœud Code ne contient **que les 2 lignes `const ...; return ...;` ci-dessous** — jamais le JSON du nœud (`{ "parameters": ... }`), jamais d'accolade en trop (sinon `Unexpected token` / `Unexpected token ':'`) :
 
 - `PLACEHOLDER - Événement déjà traité ?` :
-  - P1 : `return { json: { data: [] } };`
-  - P2 : `return { json: { data: [{ id: "E1", statut: "traite" }] } };`
-- `Relire le paiement HelloAsso` (P1 uniquement) : `return { json: { id: 987654, orderId: 123456, amount: 10000, initialAmount: 10000, state: "Authorized", date: "2026-11-26T10:00:00+01:00" } };`
-- `Lire la commande HelloAsso` (P1 uniquement) : `return { json: { id: 123456, payer: { email: "commercant@test.fr", firstName: "Youssef", lastName: "Abdelli" } } };`
+  - P1 : `const r = { data: [] }; return { json: r };`
+  - P2 : `const r = { data: [{ id: "E1", statut: "traite" }] }; return { json: r };`
+- `Relire le paiement HelloAsso` (P1 uniquement) : `const p = { id: 987654, orderId: 123456, amount: 10000, initialAmount: 10000, state: "Authorized", date: "2026-11-26T10:00:00+01:00" }; return { json: p };`
+- `Lire la commande HelloAsso` (P1 uniquement) : `const c = { id: 123456, payer: { email: "commercant@test.fr", firstName: "Youssef", lastName: "Abdelli" } }; return { json: c };``
 
 → Save → reclique **Listen for test event** → lance le test → vérifie dans **Executions** → puis **remets les vrais nœuds HTTP** (ou réimporte `workflow-webhook-paiement-corrige.json`) et Save. Ne laisse aucun nœud FAUX GET dans l'export final.
 
