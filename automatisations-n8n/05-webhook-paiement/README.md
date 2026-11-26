@@ -51,6 +51,7 @@ Webhook HelloAsso → Extraire l'événement → IF "Paiement à traiter ?"
 Nouveau workflow **`MR - Webhook paiement HelloAsso`**, OFF :
 
 1. **Webhook** `Webhook HelloAsso` : Method `POST`, Path `helloasso-webhook`, Respond = `Using 'Respond to Webhook' Node`.
+   - ⚠️ Tant qu'**aucun** nœud `Respond to Webhook` n'est connecté, tout test échoue avec `No Respond to Webhook node found in the workflow` → **c'est normal en cours de construction**. Construis d'abord tous les nœuds y compris les 3 `Respond to Webhook` (étapes 13–15), branche-les, Save — l'erreur disparaît. Alternative temporaire : mets le webhook en Respond = `Immediately`, teste, puis remets `Using 'Respond to Webhook' Node` **avant la recette** (plusieurs nœuds Respond to Webhook sont possibles, un par branche).
 2. **Code** `Extraire l'événement` (JavaScript, Run Once for Each Item) :
 ```javascript
 let body = $json.body;

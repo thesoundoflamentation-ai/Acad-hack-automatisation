@@ -21,3 +21,4 @@ Règles générales :
 - Aucun secret en dur dans le repo GitHub : placeholders uniquement (`Bearer PLACEHOLDER`, `https://api.madeleine-riviera.fr`).
 
 | 9 | Faute de frappe `lenght` au lieu de `length` dans une expression IF (`$json.data.lenght > 0`) | l'expression vaut toujours false → mauvaise branche | Relire les noms de propriétés dans les expressions ; en cas de doute, tester l'expression dans un nœud Set/Debug. |
+| 10 | Webhook en mode `Using 'Respond to Webhook' Node` testé **avant** d'avoir connecté de nœud Respond to Webhook | `No Respond to Webhook node found in the workflow` | Normal en cours de construction : connecter d'abord les nœuds Respond to Webhook (un par branche, plusieurs autorisés), ou mettre temporairement le webhook en Respond = `Immediately` puis remettre `Using 'Respond to Webhook' Node` avant la recette. |
