@@ -24,8 +24,8 @@ Réponse : 200 `{"recu":true,"nb_versions":2,"alerte":""}`.
 
 ```
 Webhook copilote → Normaliser la demande → Skill copilote (Set) → Appel Workers AI (POST chat/completions)
-→ IF "Réponse IA reçue ?" ─ false → PATCH alerte "indisponible" ─┐
-   true → Parser + filtrer CP-10 (Code) → PATCH Écrire versions IA ─┴→ Respond 200
+→ IF "Réponse IA reçue ?" ─ false → PATCH alerte indisponible (7bis) → Respond 200 - IA indisponible (8bis)
+   true → Parser + filtrer CP-10 (Code) → PATCH Écrire versions IA (7) → Respond 200 - versions IA (8)
 Error Trigger (racine séparée) → Alerte au bureau - erreur workflow
 ```
 
@@ -76,7 +76,7 @@ Options : Never Error ON + timeout 30000. On Error = Continue. (Quota épuisé �
 ={{ !!($json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content) }}
 ```
 
-is true → étape 6. false → PATCH `PLACEHOLDER - Écrire les versions IA` (étape 8) avec `alerte_moderation = "correction IA indisponible (API indisponible)"` et `version_ia_1/2` vides → puis Respond.
+is true → étape 6. false → étape 7bis (PATCH alerte indisponible **dédié**, pas celui de la branche true) → étape 8bis (Respond dédié).
 
 ### 6. Code `Parser + filtrer CP-10`
 
@@ -135,7 +135,23 @@ Headers `Authorization` = `Bearer PLACEHOLDER`, `Content-Type` = `application/js
 ={{ JSON.stringify({ version_ia_1: $('Parser + filtrer CP-10').item.json.version_ia_1, version_ia_2: $('Parser + filtrer CP-10').item.json.version_ia_2, alerte_moderation: $('Parser + filtrer CP-10').item.json.alerte_moderation }) }}
 ```
 
-Never Error ON + timeout 10000 + On Error Continue. (Branche false du IF : même PATCH, avec `alerte_moderation = "correction IA indisponible (API indisponible)"` et versions vides.)
+Never Error ON + timeout 10000 + On Error Continue → étape 8.
+
+### 7bis. Branche false du IF — PATCH `PLACEHOLDER - Alerte IA indisponible`
+
+⚠️ nœud **séparé** (le PATCH de l'étape 7 référence `Parser + filtrer CP-10`, qui n'a pas tourné ici — règle 16). Method PATCH, URL (expression) :
+
+```
+=https://api.madeleine-riviera.fr/items/proposition_fiche/{{ $('Normaliser la demande').item.json.proposition_id }}
+```
+
+Headers `Authorization` = `Bearer PLACEHOLDER`, `Content-Type` = `application/json`. Body (expression, valeurs en dur — aucune référence à un nœud qui n'a pas tourné) :
+
+```
+={{ JSON.stringify({ version_ia_1: "", version_ia_2: "", alerte_moderation: "correction IA indisponible (API indisponible)" }) }}
+```
+
+Never Error ON + timeout 10000 + On Error Continue → étape 8bis.
 
 ### 8. Respond `200 - versions IA`
 
@@ -145,7 +161,17 @@ Respond With JSON, Response Body (règle 14 + règle 16 — références amont) 
 ={{ JSON.stringify({ recu: true, nb_versions: $('Parser + filtrer CP-10').item.json.nb_versions, alerte: $('Parser + filtrer CP-10').item.json.alerte_moderation }) }}
 ```
 
-Response Code 200. Les deux branches (IF true/false) y convergent.
+Response Code 200. (Branche true uniquement.)
+
+### 8bis. Branche false — Respond `200 - IA indisponible`
+
+Respond With JSON, Response Body (valeurs en dur, règle 14) :
+
+```
+={{ JSON.stringify({ recu: true, nb_versions: 0, alerte: "correction IA indisponible (API indisponible)" }) }}
+```
+
+Response Code 200.
 
 ### 9. Error Trigger `Erreur détectée` → `Alerte au bureau - erreur workflow`
 
