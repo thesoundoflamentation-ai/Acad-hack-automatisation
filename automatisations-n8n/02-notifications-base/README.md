@@ -123,3 +123,8 @@ Vérification dans **Executions** :
 ## Livraison
 
 Quand N1/N2/N3 sont OK : ⋯ → **Export** → copie le JSON du workflow → envoie-le moi ici → après validation je le pousse dans ce dossier (`workflow-notifications-base.json`) et on merge la branche vers `main`.
+
+## Livraison en cours
+
+- `workflow-notifications-base.json` = v0.2 (export de l'équipe, **corrigé** : `rightValue` du Switch sans `=` → `demande_creee` / `demande_refusee` ; zéro `==` ; code nœud 2 testé en local sur 3 cas).
+- À valider par la recette N1→N3 dans n8n (importer ce JSON : ⋯ → Import from File / URL raw GitHub), puis merge de la branche vers `main`.
