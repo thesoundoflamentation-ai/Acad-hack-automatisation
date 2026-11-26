@@ -19,3 +19,5 @@ Règles générales :
 - En mode test, le webhook répond **200 dès la réception** même si l'exécution échoue après → le vrai statut est dans **Executions** (vert/rouge), pas dans le terminal.
 - Windows PowerShell : `curl` est un alias cassant → `curl.exe` ou `Invoke-RestMethod`, **une commande à la fois** (coller plusieurs commandes d'un coup ouvre un bloc `>>` et déforme le JSON → 422 de n8n).
 - Aucun secret en dur dans le repo GitHub : placeholders uniquement (`Bearer PLACEHOLDER`, `https://api.madeleine-riviera.fr`).
+
+| 9 | Faute de frappe `lenght` au lieu de `length` dans une expression IF (`$json.data.lenght > 0`) | l'expression vaut toujours false → mauvaise branche | Relire les noms de propriétés dans les expressions ; en cas de doute, tester l'expression dans un nœud Set/Debug. |
