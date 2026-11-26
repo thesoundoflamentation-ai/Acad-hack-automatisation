@@ -46,9 +46,10 @@ return {
 ```
 
 4. **Nœud 3 — Switch** `Quel événement ?` : Mode `Rules`, 2 règles :
-   - règle 1 : Value `={{ $json.evenement }}` equals `demande_creee` → sort sur **output 0**
-   - règle 2 : Value `={{ $json.evenement }}` equals `demande_refusee` → sort sur **output 1**
-   - (laisser « Fallback output » sur none/désactivé : un événement inconnu ne fait rien)
+   - règle 1 : **Value 1** en mode **expression** (fx BLEU activé) → tape `{{ $json.evenement }}` **SANS `=`** ; Operation `equals` (string) ; **Value 2** en mode **fixe** (gris) → tape `demande_creee` (texte, sans `=`) → cette règle sort sur **output 0**
+   - règle 2 : idem avec `demande_refusee` → **output 1**
+   - Fallback output : none (un événement inconnu ne fait rien)
+   - ⚠️ **Piège constaté** : si tu vois `=={{ ... }}` dans l'export, la règle ne matche jamais → aucune branche → le Respond n'est jamais atteint → la requête HTTP « bloque » (timeout). Correction : un seul `=` max. Vérif : ⋯ → Export → chercher `"=="` → aucun.
 5. **Branche output 0 → Nœud 4 — Send Email** `M-01 Confirmation au commerçant` :
    - Credentials : le même SMTP que la n°1 (« SMTP account 4 »)
    - From Email (expression, un seul `=`) : `=site@madeleine-riviera.fr`
