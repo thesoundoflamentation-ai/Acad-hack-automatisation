@@ -257,7 +257,7 @@
     {
       "parameters": {
         "mode": "runOnceForEachItem",
-        "jsCode": "const ev = $('Extraire l\\'événement').item.json;\nconst paiement = $('Relire le paiement HelloAsso').item.json || {};\nconst commande = $json || {};\nconst payer = (commande.payer && typeof commande.payer === \"object\") ? commande.payer : {};\nreturn { json: {\n  eventType: ev.eventType,\n  payment_id: ev.payment_id,\n  order_id: ev.order_id,\n  montant_centimes: (ev.montant_centimes != null) ? ev.montant_centimes : ((paiement.amount != null) ? paiement.amount : null),\n  date_paiement: ev.date_paiement || paiement.date || \"\",\n  state_paiement: paiement.state || \"\",\n  adhesion_id: ev.adhesion_id || \"\",\n  payer_token: ev.payer_token || \"\",\n  payer_email: payer.email || \"\",\n  payer_prenom: payer.firstName || \"\",\n  payer_nom: payer.lastName || \"\"\n} };"
+        "jsCode": "const ev = $('Extraire l\\'événement').all()[0].json;\nconst paiement = $('Relire le paiement HelloAsso').all()[0].json || {};\nconst commande = $json || {};\nconst payer = (commande.payer && typeof commande.payer === \"object\") ? commande.payer : {};\nreturn { json: {\n  eventType: ev.eventType,\n  payment_id: ev.payment_id,\n  order_id: ev.order_id,\n  montant_centimes: (ev.montant_centimes != null) ? ev.montant_centimes : ((paiement.amount != null) ? paiement.amount : null),\n  date_paiement: ev.date_paiement || paiement.date || \"\",\n  state_paiement: paiement.state || \"\",\n  adhesion_id: ev.adhesion_id || \"\",\n  payer_token: ev.payer_token || \"\",\n  payer_email: payer.email || \"\",\n  payer_prenom: payer.firstName || \"\",\n  payer_nom: payer.lastName || \"\"\n} };"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

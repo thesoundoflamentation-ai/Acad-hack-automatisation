@@ -89,10 +89,10 @@ return { json: {
    =https://api.helloasso-sandbox.com/v5/orders/{{ $('Extraire l'événement').item.json.order_id }}
    ```
    Header `Authorization` = `=Bearer {{ $('Token OAuth2 HelloAsso').item.json.access_token }}`. Never Error + On Error Continue + timeout 10000. → fournit `payer.email`, `payer.firstName`, `payer.lastName`.
-10. **Code** `Assembler le contexte` (après `Lire la commande`) — à partir de là, `$json` n'est plus l'événement : on reconstruit un objet plat en référençant les nœuds amont :
+10. **Code** `Assembler le contexte` (après `Lire la commande`) — à partir de là, `$json` n'est plus l'événement : on reconstruit un objet plat en référençant les nœuds amont. ⚠️ Dans un Code, préférer `.all()[0].json` à `.item.json` (`.item` peut être `undefined` si le pairing d'items est perdu → `Cannot read properties of undefined`) :
 ```javascript
-const ev = $('Extraire l'événement').item.json;
-const paiement = $('Relire le paiement HelloAsso').item.json || {};
+const ev = $('Extraire l'événement').all()[0].json;
+const paiement = $('Relire le paiement HelloAsso').all()[0].json || {};
 const commande = $json || {};
 const payer = (commande.payer && typeof commande.payer === "object") ? commande.payer : {};
 return { json: {
@@ -179,7 +179,7 @@ Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/helloasso-webhook
 
 → **Dé-épingle** (Pin → Clear) après les tests.
 
-**Sans l'onglet Pin (version gratuite) — méthode FAUX GET pour P1/P2** : remplace temporairement chaque GET à simuler par un nœud **Code portant exactement le même nom** que le nœud HTTP remplacé (sinon les références `$('...')` en aval cassent). ⚠️ Le champ **JavaScript** du nœud Code ne contient **que les 2 lignes `const ...; return ...;` ci-dessous** — jamais le JSON du nœud (`{ "parameters": ... }`), jamais d'accolade en trop (sinon `Unexpected token` / `Unexpected token ':'`) :
+**Sans l'onglet Pin (version gratuite) — méthode FAUX GET pour P1/P2** : remplace temporairement chaque GET à simuler par un nœud **Code portant exactement le même nom** que le nœud HTTP remplacé. ⚠️ **Supprime d'abord le nœud HTTP**, puis ajoute le Code et renomme-le avec le nom exact (pas de suffixe `1`/`0`) : les références `$('...')` sont résolues **par nom** — si le nom dérive, le nœud aval plante (`Cannot read properties of undefined (reading 'json')`, règle 13) : ⚠️ Le champ **JavaScript** du nœud Code ne contient **que les 2 lignes `const ...; return ...;` ci-dessous** — jamais le JSON du nœud (`{ "parameters": ... }`), jamais d'accolade en trop (sinon `Unexpected token` / `Unexpected token ':'`) :
 
 - `PLACEHOLDER - Événement déjà traité ?` :
   - P1 : `const r = { data: [] }; return { json: r };`
