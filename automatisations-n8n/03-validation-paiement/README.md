@@ -49,7 +49,9 @@ return {
 4. **Nœud 3 — HTTP Request** `PLACEHOLDER - Enregistrer l'adhésion en attente de paiement` :
    - Method `PATCH`
    - URL (expression, un seul `=`) : `=https://api.madeleine-riviera.fr/items/demande_adhesion/{{ $json.demande.id }}` ← **PLACEHOLDER API des devs**
-   - Headers : `Authorization` = `Bearer PLACEHOLDER`, `Content-Type` = `application/json`
+   - Headers (Send Headers ON → Specify Headers → **Using Fields Below**, 2 lignes, champs en mode **fixe** fx gris, **sans `=`** devant les valeurs) :
+     - Name `Authorization` → Value `Bearer PLACEHOLDER`
+     - Name `Content-Type` → Value `application/json`
    - Send Body ON, Body Content Type `JSON`, Specify Body `JSON`, JSON Body (expression, un seul `=`) :
      ```
      ={ "statut_adhesion": "en_attente_paiement", "payer_token": $json.payer_token, "payer_url": $json.payer_url, "montant_eur": $json.montant_eur }
