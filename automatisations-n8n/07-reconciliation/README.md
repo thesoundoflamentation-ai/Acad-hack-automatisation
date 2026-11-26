@@ -63,7 +63,19 @@ return d.map(p => ({ json: {
 10. **Send Email** `M-05 Bienvenue (rattrapage) - PLACEHOLDER SMTP` (credential SMTP existant, On Error Continue) :
     - From `=site@madeleine-riviera.fr`, To (expression) : `={{ ($('Lire la commande HelloAsso').item.json.payer || {}).email || "" }}` ← règle 5 : après des nœuds en continue-on-fail, on référence le nœud amont
     - Subject : `=Bienvenue chez Madeleine Riviera — votre adhésion est active`
-    - Text : idem n°5 (paiement confirmé, 12 mois, lien `https://madeleine-riviera.fr/activer-compte?jeton=PLACEHOLDER`)
+    - Text (expression, un seul `=` en tête) :
+    ```
+    =Bonjour {{ ($('Lire la commande HelloAsso').item.json.payer || {}).firstName || "" }},
+
+Votre paiement de {{ ($('Déplier les paiements').item.json.montant_centimes || 0) / 100 }} € a bien été confirmé.
+
+Votre adhésion à l'association Madeleine Riviera est active pour 12 mois.
+
+Activez votre espace commerçant pour publier votre fiche :
+https://madeleine-riviera.fr/activer-compte?jeton=PLACEHOLDER
+
+L'association Madeleine Riviera
+    ```
 11. **No Operation** `Fin - rattrapé` en sortie de M-05.
 12. **Save**.
 
