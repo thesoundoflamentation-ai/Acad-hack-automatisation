@@ -1,0 +1,173 @@
+{
+ "name": "MR - Validation → lien de paiement (M-04)",
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "demande-validee",
+    "responseMode": "responseNode",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2.2,
+   "position": [
+    0,
+    0
+   ],
+   "id": "313fcbff-4997-43db-9a65-35501a0791af",
+   "name": "Réception validation bureau",
+   "webhookId": "14f441d8-08a3-4ae3-a310-5de8b53b2e22"
+  },
+  {
+   "parameters": {
+    "method": "PATCH",
+    "url": "=https://api.madelaine-riviera.fr/items/demande_adhesion/{{  $json.demande.id }}",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "=Authorization",
+       "value": "=Bearer PLACEHOLDER"
+      },
+      {
+       "name": "=Content-Type",
+       "value": "=application/json"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={ \"statut_adhesion\": \"en_attente_paiement\", \"payer_toker\": $json.payer, \"payer_url\": $json.payer_url, \"montant_eur\": $json.montant_eur }",
+    "options": {
+     "timeout": 10000
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.5,
+   "position": [
+    448,
+    0
+   ],
+   "id": "a828fbd7-556c-4dda-bd25-ca90a6ab6877",
+   "name": "PLACEHOLDER - Enregistrer l'adhésion en attente de paiment",
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={ \"recu\": true, \"payer_url\": \"{{ $('Préparer le paiement').item.json.payer_url }}\" }",
+    "options": {
+     "responseCode": 200
+    }
+   },
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.5,
+   "position": [
+    896,
+    0
+   ],
+   "id": "7613cae5-7e13-4f62-9354-b1dd4e8b9aa5",
+   "name": "Respond to Webhook"
+  },
+  {
+   "parameters": {
+    "fromEmail": "=site.@madeleine-riviera.com",
+    "toEmail": "={{ $json.demande.email }}",
+    "subject": "=Votre adhésion est validée - lien de paiement de votre cotisation",
+    "emailFormat": "text",
+    "text": "=Bonjour {{ $json.demande.nom_commercial || \"cher commerçant\" }},\n\nBonne nouvelle : le bureau a validé votre demande d'adhésion à Madeleine Riviera (n° {{ $json.demande.id }}).\n\nPour activer votre adhésion ({{ $json.montant_eur }} € pour 12 mois), réglez votre cotisation sur ce lien :\n{{ $json.payer_url }}\n\nCe lien reste valable tant que le paiement n'est pas effectué. Dès la confirmation du paiement, votre compte sera activé et vous recevrez un e-mail pour choisir votre mot de passe.\n\nL'association Madeleine Riviera",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.emailSend",
+   "typeVersion": 2.1,
+   "position": [
+    672,
+    0
+   ],
+   "id": "d49eabd6-4084-4e15-a6a4-dbfa338bdeed",
+   "name": "M-04 Lien de paiement",
+   "webhookId": "3723ef87-1a83-4550-b544-d957c473ca81",
+   "credentials": {
+    "smtp": {
+     "id": "w2k8Pr5aUQ9oektQ",
+     "name": "SMTP account 4"
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "mode": "runOnceForEachItem",
+    "jsCode": "let body = $json.body;\nif (typeof body === \"string\") { try { body = JSON.parse(body); } catch (e) { body = null; } }\nif (!body || typeof body !== \"object\" || Array.isArray(body)) body = $json;\nconst { randomUUID } = require('crypto');\nconst SITE_URL = \"https://madeleine-riviera.fr\"; // PLACEHOLDER : nom de domaine (H9), à remplacer par le vrai domaine\nconst demande = (body.demande && typeof body.demande === \"object\") ? body.demande : {};\nconst montant = Number(body.montant_eur) > 0 ? Number(body.montant_eur) : 100; // cotisation 100 €/an (H5)\nconst payer_token = randomUUID();\nreturn {\n  json: {\n    demande: demande,\n    montant_eur: montant,\n    payer_token: payer_token,\n    payer_url: SITE_URL + \"/payer/\" + payer_token\n  }\n};"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    224,
+    0
+   ],
+   "id": "fcdd9d50-bc8d-46cb-a7c4-9a7d5d03a5bf",
+   "name": "Préparer le paiement"
+  }
+ ],
+ "pinData": {},
+ "connections": {
+  "Réception validation bureau": {
+   "main": [
+    [
+     {
+      "node": "Préparer le paiement",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "PLACEHOLDER - Enregistrer l'adhésion en attente de paiment": {
+   "main": [
+    [
+     {
+      "node": "M-04 Lien de paiement",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "M-04 Lien de paiement": {
+   "main": [
+    [
+     {
+      "node": "Respond to Webhook",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Préparer le paiement": {
+   "main": [
+    [
+     {
+      "node": "PLACEHOLDER - Enregistrer l'adhésion en attente de paiment",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "active": false,
+ "settings": {
+  "executionOrder": "v1",
+  "binaryMode": "separate"
+ },
+ "versionId": "ca49a2d5-0f8a-42d4-829e-aab32294cc0d",
+ "meta": {
+  "templateCredsSetupCompleted": true,
+  "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
+ },
+ "nodeGroups": [],
+ "id": "BbvG6Ix3HupN7vSA",
+ "tags": []
+}
