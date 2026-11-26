@@ -250,6 +250,26 @@ Attendus dans **Executions** :
 
 Puis remets les vrais nœuds HTTP et Save. Aucun FAUX GET dans l'export final.
 
-## Livraison
+## Fichier final
 
-Quand E1–E3 sont OK : ⋯ → **Export** → envoie-moi le JSON (vérifie : zéro `==`, `pinData` vide, pas de FAUX GET) → push dans `08-rappels-echeances/workflow-rappels-echeances.json` sur cette branche, merge vers `main` (PR #7).
+`workflow-rappels-echeances.json` = export validé et livré (recette E1–E3 OK) : 18 nœuds, cron `0 7 * * *` Europe/Paris avec **2 branches parallèles** (M-08 d'un côté, M-09/M-10 de l'autre), Switch `rappel`/`echue` + fallback `extra`, Error Trigger → alerte bureau, ids neufs, zéro `==`, `pinData` vide.
+
+Corrections intégrées à l'export (à retenir pour les suivantes) :
+
+- Directus : **`limit=100`** (pas `pageSize`) + filtres via **Send Query Parameters** (`filter[statut][_eq]`), règle 19
+- PATCH : `Authorization: Bearer PLACEHOLDER` + `Content-Type: application/json` + body `={{ JSON.stringify({ ... }) }}`, URL avec référence amont `$('Déplier ...').item.json.id` (règle 16)
+- relance M-08 : **toutes les 7 jours** après J+3 (`7 * 86400000` dans « Déplier demandes »), pas quotidienne
+- e-mail vide → item ignoré (`!!p.email` / `a.email` dans les Codes), un mauvais item ne fait plus planter tout le lot
+- `date_fin` en date seule (`AAAA-MM-JJ`) → échéance à la **fin de ce jour** (+86400000 ms), règle 20
+- **pas de On Error Continue sur les HTTP** : une erreur arrête l'exécution et déclenche l'Error Trigger → alerte bureau (règle 18, variante n°8)
+- Code « Déplier » : `$input.first().json` + `pairedItem: { item: 0 }` + `throw` si le champ `data` est absent (erreur visible → alerte, plutôt qu'un succès silencieux)
+
+## À confirmer côté Directus (quand les devs livrent le schéma)
+
+- `m08_dernier_envoi` / `m09_dernier_rappel` : types attendus (date-heure ISO / string) — à ajuster si besoin
+- `date_fin` : `datetime` ou `date` ? (la règle 20 suppose date-seule possible)
+- la fiche passe en « inactive » via le Flow Directus à la mise à jour `adhesion.statut = echue` (statut calculé §5.2)
+
+## Historique de construction
+
+Voir les étapes ci-dessus (construit à la main dans n8n) et les tests E1–E3.
