@@ -47,7 +47,7 @@ return { json: { payer_token: String(body.payer_token || body.token || "") } };
    =https://api.madeleine-riviera.fr/items/demande_adhesion?filter[payer_token][_eq]={{ $json.payer_token }}&fields=id,email,nom_commercial,montant_eur,statut_adhesion
    ```
    Headers (Using Fields Below, mode fixe, sans `=`) : `Authorization` → `Bearer PLACEHOLDER`. Options : timeout 10000, Never Error ON. Settings → On Error = `Continue (regular output)`. Note sur le nœud : `PLACEHOLDER — remplacer par l'API Directus réelle`.
-4. **IF** `Demande trouvée ?` : condition `={{ $json.data && $json.data.length > 0 }}` is true → true = oui, false = non.
+4. **IF** `Demande trouvée ?` : condition `={{ $json.data && $json.data.length > 0 }}  ⚠️ bien écrire `length` (pas `lenght`)` is true → true = oui, false = non.
    - ⚠️ Si le GET placeholder échoue (continue-on-fail), `$json` = `{error:...}` → `data` absent → branche **false** → lien invalide (comportement attendu tant que l'API n'existe pas).
 5. **Branche true → HTTP Request** `Token OAuth2 HelloAsso` : POST `https://api.helloasso-sandbox.com/oauth2/token` (sandbox ; prod = `api.helloasso.com`), Body Content Type `Form URL Encoded`, body : `grant_type` = `client_credentials`, `client_id` = `PLACEHOLDER`, `client_secret` = `PLACEHOLDER`. Never Error + On Error Continue. (En prod : remplacer par un vrai credential OAuth ou mettre le token en cache.)
 6. **Branche true (suite) → HTTP Request** `Créer le checkout HelloAsso` : POST, URL (expression) :
