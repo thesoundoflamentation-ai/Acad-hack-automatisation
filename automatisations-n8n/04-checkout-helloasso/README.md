@@ -80,7 +80,9 @@ Voir `../REGLES-ERREURS-n8n.md`. Ici : références de nœuds via la liste déro
 
 ## Tests de recette
 
-Webhook → **Listen for test event** → PowerShell (une commande à la fois) :
+⚠️ **Mode test n8n** : l'URL `/webhook-test/...` n'accepte **qu'un seul appel** après chaque clic sur « Listen for test event » (ensuite : `The requested webhook is not registered`). → **Reclique « Listen for test event » entre chaque test.**
+
+Webhook → **Listen for test event** → PowerShell (une commande à la fois, re-cliquer Listen entre chaque) :
 
 ```powershell
 # H1 — jeton bidon : attendu 404 {"error":"lien de paiement invalide ou expiré"} (le GET placeholder échoue -> branche false)
@@ -93,7 +95,14 @@ Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/payer" -Method PO
 Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/payer" -Method POST -ContentType "application/json" -Body '{"payer_token":"591fa12b-abdf-47f7-af1e-dad72feef69b"}'
 ```
 
-Vérification H2 dans **Executions** → nœud `Créer le checkout HelloAsso` → onglet **Input** (le body envoyé) : `totalAmount: 10000`, `backRef: "D10"`, `metadata.adhesion_id: "D10"`.
+**Procédure Pin pour H2** (tant que l'API du site est en placeholder, le GET échoue toujours → branche false → 404, même avec un « vrai » token) :
+1. Dans le workflow, ouvre le nœud `PLACEHOLDER - Lire la demande par jeton` → onglet **Pin** (en haut du panneau) → colle :
+```json
+{"data":[{"id":"D10","email":"commercant@test.fr","nom_commercial":"Boulangerie Meme","montant_eur":100,"statut_adhesion":"en_attente_paiement"}]}
+```
+2. **Save**. Reclique **Listen for test event** sur le webhook, lance H2.
+3. Le flux doit aller jusqu'au checkout. Vérification dans **Executions → nœud `Créer le checkout HelloAsso` → onglet Input** (le body envoyé) : `totalAmount: 10000`, `backRef: "D10"`, `metadata.adhesion_id: "D10"`, `metadata.payer_token`. Le POST HelloAsso lui-même échouera (pas de vraies clés sandbox) → erreur continue → le Respond 200 renverra `redirectUrl: null` : normal en placeholder.
+4. N'oublie pas de **dé-épingler** (Pin → Clear) après le test.
 
 ## Livraison
 
