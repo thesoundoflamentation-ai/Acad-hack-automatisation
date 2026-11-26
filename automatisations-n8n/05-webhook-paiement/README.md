@@ -131,9 +131,9 @@ https://madeleine-riviera.fr/activer-compte?jeton=PLACEHOLDER
 
 L'association Madeleine Riviera
     ```
-13. **Respond to Webhook** `200 - paiement traité` (fin de branche true) : Respond With `JSON`, Response Body (expression) : `={ "traite": true, "helloasso_event_id": $('Assembler le contexte').item.json.payment_id }`, Response Code `200`.
-14. **Respond to Webhook** `200 - déjà traité` (branche true de `Déjà traité ?`) : `={ "deja_traite": true, "helloasso_event_id": $('Extraire l'événement').item.json.payment_id }`, code `200`.
-15. **Respond to Webhook** `200 - ignoré` (branche false de `Paiement à traiter ?` ET branche false de `Paiement autorisé ?`) : `={ "ignore": true, "eventType": $('Extraire l'événement').item.json.eventType }`, code `200`.
+13. **Respond to Webhook** `200 - paiement traité` (fin de branche true) : Respond With `JSON`, Response Body (expression — **chaîne JSON via `JSON.stringify`, règle 14**) : `={{ JSON.stringify({ traite: true, helloasso_event_id: $('Assembler le contexte').item.json.payment_id }) }}`, Response Code `200`.
+14. **Respond to Webhook** `200 - déjà traité` (branche true de `Déjà traité ?`) : `={{ JSON.stringify({ deja_traite: true, helloasso_event_id: $('Extraire l\'événement').item.json.payment_id }) }}`, code `200`.
+15. **Respond to Webhook** `200 - ignoré` (branche false de `Paiement à traiter ?` ET branche false de `Paiement autorisé ?`) : `={{ JSON.stringify({ ignore: true, eventType: $('Extraire l\'événement').item.json.eventType }) }}`, code `200`.
 16. **Save**.
 
 ## Règles anti-erreurs
