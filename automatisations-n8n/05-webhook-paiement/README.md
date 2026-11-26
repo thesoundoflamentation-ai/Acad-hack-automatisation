@@ -193,13 +193,6 @@ Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/helloasso-webhook
 
 ⚠️ Si le terminal renvoie `{"message":"Error in workflow"}` (HTTP 500) : l'exécution est morte **avant** un nœud Respond to Webhook → branche non branchée ou nœud en erreur sans On Error Continue. Voir la règle 11 dans `../REGLES-ERREURS-n8n.md`.
 
-## Fichier de corrections (intermédiaire)
+## Fichier final
 
-`workflow-webhook-paiement-corrige.json` = export intermédiaire corrigé (16 nœuds, ids neufs → aucun conflit avec ton workflow existant), à importer tel quel. **Lien direct (fichier brut)** : https://raw.githubusercontent.com/thesoundoflamentation-ai/Acad-hack-automatisation/vibe/webhook-paiement-helloasso-182b13/automatisations-n8n/05-webhook-paiement/workflow-webhook-paiement-corrige.json — puis dans n8n : ⋯ → **Import from File** → sélectionne le fichier téléchargé. ⚠️ Ne copie pas le JSON depuis la page HTML GitHub (page « blob ») et n'utilise pas Import from URL avec cette page : c'est la cause classique d'un « JSON invalide » — passe par le lien **Raw** ci-dessus. Alternative : télécharge le Raw, ouvre le fichier, Ctrl+A, Ctrl+C, puis dans un canvas n8n vide Ctrl+V.
-Corrections appliquées : 3 nœuds `Respond to Webhook` ajoutés et branchés (`200 - ignoré` ×2 branches, `200 - déjà traité`, `200 - paiement traité`), body OAuth2 en urlencoded valide (`grant_type=client_credentials&client_id=PLACEHOLDER&client_secret=PLACEHOLDER`), Never Error + timeout 10000 + On Error Continue sur tous les HTTP externes, header `Authorization` (faute de frappe `Autorization` corrigée), texte M-05 complet, condition parasite supprimée dans `Paiement autorisé ?`.
-
-→ Import → **Save** → recette P1/P2/P3. Ce fichier sera remplacé par ton export final validé (`workflow-webhook-paiement.json`) avant le merge vers `main`.
-
-## Livraison
-
-Quand P1/P2/P3 sont OK : ⋯ → **Export** → copie le JSON → envoie-le moi → push dans `05-webhook-paiement/workflow-webhook-paiement.json` sur cette branche, merge vers `main` (PR #4).
+`workflow-webhook-paiement.json` = version livrée et validée : 16 nœuds, **vrais nœuds HTTP placeholder** (aucun FAUX GET), noms propres (pas de suffixe `1`/`0`), ids neufs, zéro `==`, apostrophes échappées dans les `$('...')`. Recette : **P1 OK** dans n8n (200 `{"traite":true}` + POST `evenement_paiement` + e-mail M-05) ; branches P2 `deja_traite` / P3 `ignore` câblées sur les nœuds Respond.
