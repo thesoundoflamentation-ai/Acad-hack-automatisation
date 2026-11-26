@@ -107,3 +107,15 @@ Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/payer" -Method PO
 ## Livraison
 
 Quand H1/H2 sont OK : ⋯ → **Export** → copie le JSON → envoie-le moi → push dans `04-checkout-helloasso/workflow-checkout-helloasso.json` sur cette branche, merge vers `main` (PR #3).
+
+## H2 sans l'onglet Pin (méthode universelle)
+
+Si ton n8n n'a pas le bouton « Pin data » : **remplace temporairement** le nœud `PLACEHOLDER - Lire la demande par jeton` par un nœud **Code** `FAUX GET` :
+
+```javascript
+return { json: { data: [{ id: "D10", email: "commercant@test.fr", nom_commercial: "Boulangerie Meme", montant_eur: 100, statut_adhesion: "en_attente_paiement" }] } };
+```
+
+→ Save → reclique **Listen for test event** sur le webhook → lance H2 → vérifie dans **Executions → nœud `Créer le checkout HelloAsso` → onglet Input** : `totalAmount: 10000`, `backRef: "D10"`, `metadata.adhesion_id: "D10"`. → puis **remets le vrai nœud GET placeholder** et Save.
+
+⚠️ Sur le nœud GET placeholder, ajoute aussi dans **Options : Never Error ON** (en plus du timeout 10000).
