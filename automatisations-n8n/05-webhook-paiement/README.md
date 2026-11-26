@@ -181,6 +181,12 @@ Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/helloasso-webhook
 
 **Sans l'onglet Pin** : remplace temporairement chaque GET à simuler par un nœud **Code** `FAUX GET` qui `return { json: <réponse fictive> };` (ex. `return { json: { data: [] } };`), teste, puis remets les vrais nœuds. Ne laisse aucun nœud de test dans l'export final.
 
+## Fichier de corrections (intermédiaire)
+
+`workflow-webhook-paiement-corrige.json` = export intermédiaire corrigé (16 nœuds), à importer tel quel : ⋯ → **Import from File** (ou copie le JSON brut depuis GitHub, bouton Raw). Corrections appliquées : 3 nœuds `Respond to Webhook` ajoutés et branchés (`200 - ignoré` ×2 branches, `200 - déjà traité`, `200 - paiement traité`), body OAuth2 en urlencoded valide (`grant_type=client_credentials&client_id=PLACEHOLDER&client_secret=PLACEHOLDER`), Never Error + timeout 10000 + On Error Continue sur tous les HTTP externes, header `Authorization` (faute de frappe `Autorization` corrigée), texte M-05 complet, condition parasite supprimée dans `Paiement autorisé ?`.
+
+→ Import → **Save** → recette P1/P2/P3. Ce fichier sera remplacé par ton export final validé (`workflow-webhook-paiement.json`) avant le merge vers `main`.
+
 ## Livraison
 
 Quand P1/P2/P3 sont OK : ⋯ → **Export** → copie le JSON → envoie-le moi → push dans `05-webhook-paiement/workflow-webhook-paiement.json` sur cette branche, merge vers `main` (PR #4).
