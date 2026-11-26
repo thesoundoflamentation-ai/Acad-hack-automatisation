@@ -1,4 +1,5 @@
 {
+ "name": "MR - Notifications adhésion (M-01/M-03)",
  "nodes": [
   {
    "parameters": {
@@ -10,10 +11,10 @@
    "type": "n8n-nodes-base.webhook",
    "typeVersion": 2.2,
    "position": [
-    -496,
-    0
+    -16,
+    -16
    ],
-   "id": "8bd893f0-590d-4579-b384-7f42ca3712ed",
+   "id": "b61f578c-f718-48be-bcac-645932265a9d",
    "name": "Réception événement adhésion",
    "webhookId": "7b289c6e-3f05-4196-8c9a-b8708e720b5e"
   },
@@ -25,10 +26,10 @@
    "type": "n8n-nodes-base.code",
    "typeVersion": 2,
    "position": [
-    -272,
-    0
+    208,
+    -16
    ],
-   "id": "402d3c94-93e0-4044-8808-f8c8e0ba52e1",
+   "id": "6ff55f8d-0659-40dc-9a15-f847829b12ed",
    "name": "Normaliser l'événement"
   },
   {
@@ -89,10 +90,10 @@
    "type": "n8n-nodes-base.switch",
    "typeVersion": 3.5,
    "position": [
-    -48,
-    0
+    432,
+    -16
    ],
-   "id": "6445da43-0364-40f6-aba7-2e4b5492c456",
+   "id": "916844f7-a29a-4045-8b5b-efd17e25b539",
    "name": "Quel événement ?"
   },
   {
@@ -107,10 +108,10 @@
    "type": "n8n-nodes-base.emailSend",
    "typeVersion": 2.1,
    "position": [
-    176,
-    -144
+    656,
+    -160
    ],
-   "id": "2600cc29-2f77-4a5d-8520-84762e46949a",
+   "id": "e1217163-6ba0-4e8c-afe0-e279d8df34dd",
    "name": "M-01 Confirmation du commerçant",
    "webhookId": "21772dc1-bf56-42eb-bcf7-b7fcc4595b3e",
    "credentials": {
@@ -133,10 +134,10 @@
    "type": "n8n-nodes-base.emailSend",
    "typeVersion": 2.1,
    "position": [
-    176,
-    176
+    656,
+    160
    ],
-   "id": "05eeca52-79ad-4fc6-a3a5-36f802c86b7a",
+   "id": "e571f4cf-acdb-420b-9110-4ebc652f04d2",
    "name": "M-03 Refus avec motif",
    "webhookId": "1df8a939-bd9b-4f6d-b563-03edb90911fc",
    "credentials": {
@@ -158,13 +159,14 @@
    "type": "n8n-nodes-base.respondToWebhook",
    "typeVersion": 1.5,
    "position": [
-    576,
-    -16
+    1056,
+    -32
    ],
-   "id": "19df794d-cd61-4d07-a916-b18246854d6a",
+   "id": "a3e5f177-0365-4636-ae8b-b5598a09d37b",
    "name": "Respond to Webhook"
   }
  ],
+ "pinData": {},
  "connections": {
   "Réception événement adhésion": {
    "main": [
@@ -236,10 +238,17 @@
    ]
   }
  },
- "pinData": {},
+ "active": false,
+ "settings": {
+  "executionOrder": "v1",
+  "binaryMode": "separate"
+ },
+ "versionId": "0873162c-cf75-48a6-a990-403a2508f4ff",
  "meta": {
   "templateCredsSetupCompleted": true,
   "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
  },
- "name": "MR - Notifications adhésion (M-01/M-03)"
+ "nodeGroups": [],
+ "id": "ttUd5lUsOc8Ce1Zl",
+ "tags": []
 }
