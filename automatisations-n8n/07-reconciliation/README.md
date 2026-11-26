@@ -55,9 +55,9 @@ return d.map(p => ({ json: {
    Header `Authorization` → `Bearer PLACEHOLDER` (mode fixe). Never Error ON + timeout 10000 + On Error Continue. ⚠️ URL sans retour à la ligne final.
 7. **IF** `Déjà traité ?` : `={{ $json.data && $json.data.length > 0 }}` ⚠️ `length` is true → true : **No Operation** `Fin - déjà traité` ; false → étape 8.
 8. **HTTP Request** `Lire la commande HelloAsso` : GET, URL (expression, un seul `=`) :
-   ```
-   =https://api.helloasso-sandbox.com/v5/orders/{{ $('Déplier les paiements').item.json.order_id }}
-   ```
+
+   `=https://api.helloasso-sandbox.com/v5/orders/{{ $('Déplier les paiements').item.json.order_id }}`
+
    ⚠️ **pas `$json.order_id`** : à ce point `$json` = la réponse du GET idempotence (`{data:...}`), pas le paiement → règle 5, on référence `Déplier les paiements`. Header `Authorization` = `=Bearer {{ $('Token OAuth2 HelloAsso').item.json.access_token }}`. Never Error ON + timeout 10000 + On Error Continue.
 9. **HTTP Request** `PLACEHOLDER - Enregistrer l'événement de paiement (rattrapage)` : POST `https://api.madeleine-riviera.fr/items/evenement_paiement`, headers `Authorization` → `Bearer PLACEHOLDER`, `Content-Type` → `application/json`. Send Body ON → Specify Body `JSON` → JSON Body (expression, un seul `=`) :
    ```
@@ -118,6 +118,14 @@ return { json: { id: Number($json.order_id), payer: { email: "commercant@test.fr
 
 → puis **remets les vrais nœuds HTTP** (ou supprime les FAUX GET) et Save. Aucun FAUX GET dans l'export final.
 
-## Livraison
+## Fichier final
 
-Quand R1–R3 sont OK : ⋯ → **Export** → copie le JSON → envoie-le moi → push dans `07-reconciliation/workflow-reconciliation.json` sur cette branche, merge vers `main` (PR #6). Vérifie avant export : zéro `==`, `pinData` vide, aucun nœud de test, le Schedule Trigger bien à `0 6 * * *` Europe/Paris.
+`workflow-reconciliation.json` = export validé et livré (recette R1–R3 OK) : 16 nœuds dont le **Error Trigger** (voir ci-dessous), cron `0 6 * * *` Europe/Paris, ids neufs, zéro `==`, `pinData` vide. Nettoyages appliqués à l'export : URL du GET idempotence restaurée avec le filtre `filter[helloasso_event_id][_eq]={{ $json.payment_id }}`, `jsonBody` du POST en forme objet `={ ... }` avec références `$('Déplier les paiements').item.json.*` (règle 16), `$input.first()` remplacé par `$json` (règle 2), Never Error + On Error Continue sur les 5 HTTP et les 2 e-mails.
+
+## Alerte erreur workflow (Error Trigger — bonus)
+
+Le workflow embarque un second déclencheur racine : **Error Trigger** `Erreur détectée` → e-mail `Alerte au bureau - erreur workflow` (To `bureau@madeleine-riviera.fr`, sujet `⚠️ Échec du workflow n8n : {{ $json.workflow.name }}`, texte avec `lastNodeExecuted`, `error.message`, id et lien de l'exécution). Règle 18. À répliquer sur les autres workflows critiques (n°5 webhook paiement notamment).
+
+## Historique de construction
+
+Voir les étapes ci-dessus (construit à la main dans n8n) et les tests R1–R3.
