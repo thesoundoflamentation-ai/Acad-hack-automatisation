@@ -77,7 +77,7 @@ return { json: {
    Headers (Using Fields Below, mode fixe, sans `=`) : `Authorization` → `Bearer PLACEHOLDER`. Options : timeout 10000 + **Never Error ON**. Settings → On Error = `Continue (regular output)`.
 5. **IF** `Déjà traité ?` : `={{ $json.data && $json.data.length > 0 }}` ⚠️ bien `length` (pas `lenght`) `is true` → true = déjà traité, false = continuer.
    - ⚠️ Si le GET placeholder échoue (continue-on-fail), `$json` = `{error:...}` → `data` absent → branche **false** → on continue (comportement sûr : on relira le paiement chez HelloAsso).
-6. **HTTP Request** `Token OAuth2 HelloAsso` : POST `https://api.helloasso-sandbox.com/oauth2/token` (prod : `api.helloasso.com`), Body Content Type `Form URL Encoded`, champs : `grant_type` = `client_credentials`, `client_id` = `PLACEHOLDER`, `client_secret` = `PLACEHOLDER`. Never Error + On Error Continue + timeout 10000.
+6. **HTTP Request** `Token OAuth2 HelloAsso` : POST `https://api.helloasso-sandbox.com/oauth2/token` (prod : `api.helloasso.com`), Send Body ON → **Body Content Type = `Form URL Encoded`** → 3 champs : `grant_type` = `client_credentials`, `client_id` = `PLACEHOLDER`, `client_secret` = `PLACEHOLDER`. ⚠️ Ne laisse PAS le body en mode « String » avec du texte libre (`grant_type = ...`) : ce n'est pas du form-urlencoded valide, HelloAsso répondrait 400. Never Error + On Error Continue + timeout 10000.
 7. **HTTP Request** `Relire le paiement HelloAsso` : GET, URL (expression) :
    ```
    =https://api.helloasso-sandbox.com/v5/payments/{{ $json.payment_id }}
