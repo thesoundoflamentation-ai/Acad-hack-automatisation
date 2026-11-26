@@ -25,19 +25,19 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 | # | Dossier | Automatisation | Statut |
 |---|---|---|---|
 | 1 | `01-controle-siret/` | Contrôle SIRET à la demande d'adhésion (API Recherche d'entreprises, B-14 §5.7) — jamais bloquant, bureau seul averti | ✅ **VALIDÉE** — recette T1→T5 OK dans n8n (T1 conforme ; T2 fermé 2004-05-31 ; T3 siège+adresse ; T4 introuvable ; T5 format sans appel API) + code testé en local |
-| 2 | `02-notifications-base/` | E-mails M-01/M-02/M-03 (confirmation demande, alerte bureau, refus avec motif) | à faire |
-| 3 | `03-validation-paiement/` | Validation bureau → adhésion « En attente de paiement » + lien `/payer/{jeton}` + e-mail M-04 | à faire |
-| 4 | `04-checkout-helloasso/` | Création checkout HelloAsso API v5 (100 €, métadonnée id adhésion) | à faire |
-| 5 | `05-webhook-paiement/` | Webhook HelloAsso → relire commande → règlement + adhésion active (12 mois) + compte + e-mail M-05 (idempotent) | à faire |
-| 6 | `06-moderation-fiches/` | Proposition fiche → alerte bureau ; validation → M-06 ; refus → M-07 | à faire |
-| 7 | `07-reconciliation/` | Réconciliation quotidienne HelloAsso (webhooks perdus) | à faire |
-| 8 | `08-rappels-echeances/` | Cron quotidien : relance M-08 (>3 j), rappels M-09 (J-90, J-30), échéance → fiche inactive + M-10 | à faire |
-| 9 | `09-photos/` | Toutes les 5 min : contrôle type réel, ré-encodage (EXIF/GPS supprimés), publication, refus notifié | à faire |
-| 10 | `10-purges-sauvegarde/` | Cron : purges RGPD (messages 1 an, demandes 1 an, comptes échus 6 mois, conversations chatbot 30 j) + dump PG chiffré → S3 + export workflows | à faire |
-| 11 | `11-copilote-ia/` | Correction obligatoire du texte : Workers AI + skill → 2 versions ≤ 300 car. → filtre mots interdits → Directus → alerte rouge si illégal (CP-01…CP-14) | à faire |
-| 12 | `12-chatbot-ia/` | Index pgvector des contenus publics + webhook question → Llama 3.3 70B → réponse + liens ; repli recherche simple si quota (IA-01…IA-09) | à faire |
-| 13 | `13-bilan-assistant/` | Bilan mensuel B-12 au bureau (questions, sans réponse, jours quota épuisé) | à faire |
-| 14 | `14-newsletter/` | Newsletter (hors MVP, processus Excalidraw) | à faire |
+| 2 | `02-notifications-base/` | E-mails M-01/M-02/M-03 (confirmation demande, alerte bureau, refus avec motif) | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 3 | `03-validation-paiement/` | Validation bureau → adhésion « En attente de paiement » + lien `/payer/{jeton}` + e-mail M-04 | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 4 | `04-checkout-helloasso/` | Création checkout HelloAsso API v5 (100 €, métadonnée id adhésion) | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 5 | `05-webhook-paiement/` | Webhook HelloAsso → relire commande → règlement + adhésion active (12 mois) + compte + e-mail M-05 (idempotent) | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 6 | `06-moderation-fiches/` | Proposition fiche → alerte bureau ; validation → M-06 ; refus → M-07 | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 7 | `07-reconciliation/` | Réconciliation quotidienne HelloAsso (webhooks perdus) | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 8 | `08-rappels-echeances/` | Cron quotidien : relance M-08 (>3 j), rappels M-09 (J-90, J-30), échéance → fiche inactive + M-10 | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 9 | `09-photos/` | Toutes les 5 min : contrôle type réel, ré-encodage (EXIF/GPS supprimés), publication, refus notifié | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 10 | `10-purges-sauvegarde/` | Cron : purges RGPD (messages 1 an, demandes 1 an, comptes échus 6 mois, conversations chatbot 30 j) + dump PG chiffré → S3 + export workflows | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 11 | `11-copilote-ia/` | Correction obligatoire du texte : Workers AI + skill → 2 versions ≤ 300 car. → filtre mots interdits → Directus → alerte rouge si illégal (CP-01…CP-14) | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 12 | `12-chatbot-ia/` | Index pgvector des contenus publics + webhook question → Llama 3.3 70B → réponse + liens ; repli recherche simple si quota (IA-01…IA-09) | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 13 | `13-bilan-assistant/` | Bilan mensuel B-12 au bureau (questions, sans réponse, jours quota épuisé) | 🟡 en cours — branche `vibe/notifications-base-182b13` |
+| 14 | `14-newsletter/` | Newsletter (hors MVP, processus Excalidraw) | 🟡 en cours — branche `vibe/notifications-base-182b13` |
 
 ## Celle que le groupe fait seul
 
