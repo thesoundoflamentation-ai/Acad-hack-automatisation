@@ -22,6 +22,8 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 
 ## Index des automatisations (ordre prévu)
 
+> Périmètre revu le 27/11 : seules les automatisations présentes dans le board Excalidraw « AUTOMATISATIONS » sont développées (n°1–8 faites, puis n°11 copilote, n°12 chatbot, n°14 newsletter). n°9, n°10, n°13 sont reportées (⏸️).
+
 | # | Dossier | Automatisation | Statut |
 |---|---|---|---|
 | 1 | `01-controle-siret/` | Contrôle SIRET à la demande d'adhésion (API Recherche d'entreprises, B-14 §5.7) — jamais bloquant, bureau seul averti | ✅ **VALIDÉE** — recette T1→T5 OK dans n8n (T1 conforme ; T2 fermé 2004-05-31 ; T3 siège+adresse ; T4 introuvable ; T5 format sans appel API) + code testé en local |
@@ -32,11 +34,11 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 | 6 | `06-moderation-fiches/` | Proposition fiche → alerte bureau (M-02) ; validation → M-06 ; refus → M-07 | ✅ **VALIDÉE** — recette F1–F4 OK (200 `recu:true` sur les 3 événements + fallback ; e-mails M-02/M-06/M-07 vérifiés dans Executions) ; export `workflow-moderation-fiches.json` |
 | 7 | `07-reconciliation/` | Réconciliation quotidienne HelloAsso (webhooks perdus) + alerte erreur workflow (Error Trigger → e-mail bureau) | ✅ **VALIDÉE** — recette R1–R3 OK (1 seul POST pour le paiement non traité, liste vide OK, Refused ignoré) ; export `workflow-reconciliation.json` |
 | 8 | `08-rappels-echeances/` | Cron quotidien : relance M-08 (J+3 puis tous les 7 j), rappels M-09 (J-90, J-30), échéance → statut echue + M-10 + alerte erreur (Error Trigger) | ✅ **VALIDÉE** — recette E1–E3 OK (M-08 ×1, M-09 ×2, M-10 ×1, rien sinon) ; export `workflow-rappels-echeances.json` |
-| 9 | `09-photos/` | Toutes les 5 min : contrôle type réel, ré-encodage (EXIF/GPS supprimés), publication, refus notifié | ⬜ à faire |
-| 10 | `10-purges-sauvegarde/` | Cron : purges RGPD (messages 1 an, demandes 1 an, comptes échus 6 mois, conversations chatbot 30 j) + dump PG chiffré → S3 + export workflows | ⬜ à faire |
+| 9 | `09-photos/` | Toutes les 5 min : contrôle type réel, ré-encodage (EXIF/GPS supprimés), publication, refus notifié | ⏸️ reporté — hors board Excalidraw (décision 27/11, à valider avec le bureau) |
+| 10 | `10-purges-sauvegarde/` | Cron : purges RGPD (messages 1 an, demandes 1 an, comptes échus 6 mois, conversations chatbot 30 j) + dump PG chiffré → S3 + export workflows | ⏸️ reporté — hors board Excalidraw (décision 27/11) ; ⚠️ obligations RGPD §6.5 + sauvegarde à ne pas oublier en prod |
 | 11 | `11-copilote-ia/` | Correction obligatoire du texte : Workers AI + skill → 2 versions ≤ 300 car. → filtre mots interdits → Directus → alerte rouge si illégal (CP-01…CP-14) | ⬜ à faire |
 | 12 | `12-chatbot-ia/` | Index pgvector des contenus publics + webhook question → Llama 3.3 70B → réponse + liens ; repli recherche simple si quota (IA-01…IA-09) | ⬜ à faire |
-| 13 | `13-bilan-assistant/` | Bilan mensuel B-12 au bureau (questions, sans réponse, jours quota épuisé) | ⬜ à faire |
+| 13 | `13-bilan-assistant/` | Bilan mensuel B-12 au bureau (questions, sans réponse, jours quota épuisé) | ⏸️ reporté — hors board Excalidraw (décision 27/11) |
 | 14 | `14-newsletter/` | Newsletter (hors MVP, processus Excalidraw) | ⬜ à faire |
 
 ## Celle que le groupe fait seul
