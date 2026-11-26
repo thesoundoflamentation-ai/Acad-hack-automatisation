@@ -85,6 +85,7 @@ L'association Madeleine Riviera
      ```
      ={ "recu": true, "payer_url": "{{ $('Préparer le paiement').item.json.payer_url }}" }
      ```
+   - ⚠️ **Erreur « Referenced node doesn't exist »** = le nom entre `$('…')` ne correspond pas exactement au nœud 2. Manip sûre : dans le champ expression, efface et tape `$('` → une **liste déroulante** apparaît → clique sur le nœud dans la liste (le bon nom est inséré automatiquement). Vérifie aussi que le nœud 2 s'appelle bien exactement `Préparer le paiement` (double-clic sur son titre).
    - Options → Response Code `200`
 7. **Save**.
 
