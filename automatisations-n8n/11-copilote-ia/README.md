@@ -52,7 +52,7 @@ return { json: {
 
 ### 3. Set `Skill copilote`
 
-Ajoute un champ `skill` (string) = **contenu complet de `skill-copilote.md`** (copier depuis le repo, ce fichier est la version de référence). Astuce : le skill peut aussi être lu en live via un HTTP GET sur le raw GitHub — mais en MVP, en dur dans le Set, en restant synchronisé avec le fichier.
+Nœud de type **Set** (« Edit Fields » / « Définir »). Mode **Manual Mapping** → « Add Field » → Name `skill`, Type **String**, Value = **contenu complet de `skill-copilote.md`** collé en texte brut (copier depuis le repo, ce fichier est la version de référence). ⚠️ le champ Value doit rester en mode **fixe** (pas d'icône fx / pas de `=` en tête — le skill commence par `#`, donc c'est bon) : une valeur commençant par `=` serait interprétée comme une expression. Ne mets PAS le skill dans un nœud Code avec des backticks (le skill contient des blocs ``` qui casseraient le template JS) — le Set en texte brut est plus sûr. En aval, on le référence par `$('Skill copilote').item.json.skill`. Astuce : le skill peut aussi être lu en live via un HTTP GET sur le raw GitHub — mais en MVP, en dur dans le Set, en restant synchronisé avec le fichier.
 
 ### 4. HTTP `Appel Workers AI`
 
