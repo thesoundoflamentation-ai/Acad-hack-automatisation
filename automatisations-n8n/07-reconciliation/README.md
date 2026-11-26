@@ -28,8 +28,8 @@ Schedule (0 6 * * *, Europe/Paris) → Token OAuth2 HelloAsso → Lister les pai
 
 Nouveau workflow **`MR - Réconciliation HelloAsso (quotidienne)`**, OFF :
 
-1. **Schedule Trigger** `Tous les jours à 6h` : Mode `Cron`, Cron Expression `0 6 * * *`, Timezone `Europe/Paris`.
-2. **HTTP Request** `Token OAuth2 HelloAsso` : POST `https://api.helloasso-sandbox.com/oauth2/token` (prod : `api.helloasso.com`), Send Body ON, Body Content Type `Form URL Encoded`, champ texte (⚠️ **une seule chaîne urlencoded**, pas de « String » avec du texte libre) : Body = `grant_type=client_credentials&client_id=PLACEHOLDER&client_secret=PLACEHOLDER`. Options : Never Error ON + timeout 10000. Settings → On Error = `Continue (regular output)`.
+1. **Schedule Trigger** `Tous les jours à 6h` : Mode `Cron`, Cron Expression `0 6 * * *`, **Timezone `Europe/Paris`** (dans le trigger, à côté de l'expression cron — sinon l'heure est en UTC).
+2. **HTTP Request** `Token OAuth2 HelloAsso` : POST `https://api.helloasso-sandbox.com/oauth2/token` (prod : `api.helloasso.com`), Send Body ON, Body Content Type `Form URL Encoded`, champ texte : Body = `grant_type=client_credentials&client_id=PLACEHOLDER&client_secret=PLACEHOLDER` — ⚠️ **sans `=` devant** (un `=` en tête ferait croire à une expression et casserait le nœud, règle 3). Options : Never Error ON + timeout 10000. Settings → On Error = `Continue (regular output)`.
 3. **HTTP Request** `Lister les paiements de la veille` : GET, URL (expression, un seul `=`) :
    ```
    =https://api.helloasso-sandbox.com/v5/organizations/madeleine-riviera/payments?from={{ $now.minus(1, "days").toISO() }}&to={{ $now.toISO() }}&pageSize=100
@@ -52,15 +52,19 @@ return d.map(p => ({ json: {
    ```
    =https://api.madeleine-riviera.fr/items/evenement_paiement?filter[helloasso_event_id][_eq]={{ $json.payment_id }}&fields=id,statut
    ```
-   Header `Authorization` → `Bearer PLACEHOLDER` (mode fixe). Never Error + timeout 10000 + On Error Continue.
+   Header `Authorization` → `Bearer PLACEHOLDER` (mode fixe). Never Error ON + timeout 10000 + On Error Continue. ⚠️ URL sans retour à la ligne final.
 7. **IF** `Déjà traité ?` : `={{ $json.data && $json.data.length > 0 }}` ⚠️ `length` is true → true : **No Operation** `Fin - déjà traité` ; false → étape 8.
-8. **HTTP Request** `Lire la commande HelloAsso` : GET `=https://api.helloasso-sandbox.com/v5/orders/{{ $json.order_id }}`, header `Authorization` = `=Bearer {{ $('Token OAuth2 HelloAsso').item.json.access_token }}`. Never Error + timeout 10000 + On Error Continue.
+8. **HTTP Request** `Lire la commande HelloAsso` : GET, URL (expression, un seul `=`) :
+   ```
+   =https://api.helloasso-sandbox.com/v5/orders/{{ $('Déplier les paiements').item.json.order_id }}
+   ```
+   ⚠️ **pas `$json.order_id`** : à ce point `$json` = la réponse du GET idempotence (`{data:...}`), pas le paiement → règle 5, on référence `Déplier les paiements`. Header `Authorization` = `=Bearer {{ $('Token OAuth2 HelloAsso').item.json.access_token }}`. Never Error ON + timeout 10000 + On Error Continue.
 9. **HTTP Request** `PLACEHOLDER - Enregistrer l'événement de paiement (rattrapage)` : POST `https://api.madeleine-riviera.fr/items/evenement_paiement`, headers `Authorization` → `Bearer PLACEHOLDER`, `Content-Type` → `application/json`. Send Body ON → Specify Body `JSON` → JSON Body (expression, un seul `=`) :
    ```
-   ={ "helloasso_event_id": $json.payment_id, "helloasso_order_id": $json.order_id, "montant_centimes": $json.montant_centimes, "date_paiement": $json.date_paiement, "statut": "traite", "source": "reconciliation" }
+   ={ "helloasso_event_id": $('Déplier les paiements').item.json.payment_id, "helloasso_order_id": $('Déplier les paiements').item.json.order_id, "montant_centimes": $('Déplier les paiements').item.json.montant_centimes, "date_paiement": $('Déplier les paiements').item.json.date_paiement, "statut": "traite", "source": "reconciliation" }
    ```
    Never Error + timeout 10000 + On Error Continue.
-10. **Send Email** `M-05 Bienvenue (rattrapage) - PLACEHOLDER SMTP` (credential SMTP existant, On Error Continue) :
+10. **Send Email** `M-05 Bienvenue (rattrapage) - PLACEHOLDER SMTP` (credential SMTP existant, Settings → On Error = `Continue (regular output)`) : ⚠️ le champ Text commence par **un seul** `=` (`=Bonjour ...`) — un `==` en tête = expression invalide (règle 3) :
     - From `=site@madeleine-riviera.fr`, To (expression) : `={{ ($('Lire la commande HelloAsso').item.json.payer || {}).email || "" }}` ← règle 5 : après des nœuds en continue-on-fail, on référence le nœud amont
     - Subject : `=Bienvenue chez Madeleine Riviera — votre adhésion est active`
     - Text (expression, un seul `=` en tête) :
@@ -78,6 +82,8 @@ L'association Madeleine Riviera
     ```
 11. **No Operation** `Fin - rattrapé` en sortie de M-05.
 12. **Save**.
+
+⚠️ **Tous les HTTP externes (5 nœuds) : Never Error ON + timeout + On Error = Continue** ; M-05 : On Error = Continue. Sans ça, un appel qui échoue (pas de vraies clés en placeholder) plante l'exécution.
 
 ## Règles anti-erreurs
 
