@@ -151,6 +151,6 @@ Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/evenement-fiche" 
 
 Vérification : dans **Executions**, pour F1/F2/F3 ouvrir le nœud e-mail correspondant → onglet Input : destinataire, sujet, texte (motif présent pour F3). L'envoi SMTP échoue (placeholder) → erreur continue → le Respond 200 répond quand même.
 
-## Livraison
+## Fichier final
 
-Quand F1–F4 sont OK : ⋯ → **Export** → copie le JSON → envoie-le moi → push dans `06-moderation-fiches/workflow-moderation-fiches.json` sur cette branche, merge vers `main` (PR #5). Vérifie avant export : zéro `==` (⋯ → Export → chercher `"=="`), aucun nœud de test, `pinData` vide.
+`workflow-moderation-fiches.json` = export validé et livré : 7 nœuds, Switch 3 règles + fallback `extra` branché sur le Respond, Respond en `JSON.stringify` avec apostrophe échappée (`Normaliser l\'événement`, règle 12), zéro `==`, `pinData` vide. Recette **F1–F4 OK** dans n8n : 200 `{"recu":true,"evenement":...}` sur `proposition_creee` / `fiche_validee` / `fiche_refusee` / fallback, e-mails M-02/M-06/M-07 vérifiés dans Executions.

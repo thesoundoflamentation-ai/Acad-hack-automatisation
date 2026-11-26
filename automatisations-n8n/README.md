@@ -29,7 +29,7 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 | 3 | `03-validation-paiement/` | Validation bureau → adhésion « En attente de paiement » + lien `/payer/{jeton}` + e-mail M-04 | ✅ **VALIDÉE** — recette V1/V2 OK (200 + payer_url /payer/{uuid} + montant 100 par défaut)
 | 4 | `04-checkout-helloasso/` | Création checkout HelloAsso API v5 (100 €, métadonnée id adhésion) | ✅ **VALIDÉE** — H1 (404 lien invalide) + H2 (body checkout totalAmount=10000, backRef=D10) OK |
 | 5 | `05-webhook-paiement/` | Webhook HelloAsso → relire commande → règlement + adhésion active (12 mois) + compte + e-mail M-05 (idempotent) | ✅ **VALIDÉE** — recette P1/P2/P3 OK dans n8n (P1 `{"traite":true}` + POST `evenement_paiement` + M-05 ; P2 `{"deja_traite":true}` idempotent ; P3 `{"ignore":true}`) ; export final `workflow-webhook-paiement.json` |
-| 6 | `06-moderation-fiches/` | Proposition fiche → alerte bureau ; validation → M-06 ; refus → M-07 | 🟡 en cours — branche `vibe/moderation-fiches-182b13` (à construire dans n8n) |
+| 6 | `06-moderation-fiches/` | Proposition fiche → alerte bureau (M-02) ; validation → M-06 ; refus → M-07 | ✅ **VALIDÉE** — recette F1–F4 OK (200 `recu:true` sur les 3 événements + fallback ; e-mails M-02/M-06/M-07 vérifiés dans Executions) ; export `workflow-moderation-fiches.json` |
 | 7 | `07-reconciliation/` | Réconciliation quotidienne HelloAsso (webhooks perdus) | ⬜ à faire |
 | 8 | `08-rappels-echeances/` | Cron quotidien : relance M-08 (>3 j), rappels M-09 (J-90, J-30), échéance → fiche inactive + M-10 | ⬜ à faire |
 | 9 | `09-photos/` | Toutes les 5 min : contrôle type réel, ré-encodage (EXIF/GPS supprimés), publication, refus notifié | ⬜ à faire |
