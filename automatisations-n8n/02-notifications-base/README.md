@@ -48,7 +48,7 @@ return {
 4. **Nœud 3 — Switch** `Quel événement ?` : Mode `Rules`, 2 règles :
    - règle 1 : **Value 1** en mode **expression** (fx BLEU activé) → tape `{{ $json.evenement }}` **SANS `=`** ; Operation `equals` (string) ; **Value 2** en mode **fixe** (gris) → tape `demande_creee` (texte, sans `=`) → cette règle sort sur **output 0**
    - règle 2 : idem avec `demande_refusee` → **output 1**
-   - Fallback output : none (un événement inconnu ne fait rien)
+   - **Fallback output : crée une 3e sortie (output 2)** et branche-la **directement sur le nœud Respond to Webhook** (étape 7) — comme ça même un événement inconnu reçoit un 200 et l'appelant (Flow Directus) ne bloque pas. Sans fallback, un événement inconnu s'arrête au Switch et la requête HTTP reste en attente (c'est le « blocage » constaté sur N3 — comportement normal).
    - ⚠️ **Piège constaté** : si tu vois `=={{ ... }}` dans l'export, la règle ne matche jamais → aucune branche → le Respond n'est jamais atteint → la requête HTTP « bloque » (timeout). Correction : un seul `=` max. Vérif : ⋯ → Export → chercher `"=="` → aucun.
 5. **Branche output 0 → Nœud 4 — Send Email** `M-01 Confirmation au commerçant` :
    - Credentials : le même SMTP que la n°1 (« SMTP account 4 »)
@@ -90,6 +90,12 @@ L'association Madeleine Riviera
    - Options → Response Code : `200`
 8. **Save**.
 
+## Note sur le SMTP en placeholder
+
+Tant que le credential SMTP n'est pas un vrai compte Scaleway, l'envoi échoue avec une erreur du type `getaddrinfo ENOTFOUND smtp.scaleway.com` — **c'est attendu**. Ce qui compte :
+1. Les 2 nœuds Send Email doivent avoir **Settings → On Error = Continue (regular output)** → sinon l'exécution s'arrête à l'e-mail et aucun 200 n'est renvoyé.
+2. La recette porte sur le **contenu généré** (subject/text) visible dans l'Output du nœud e-mail, pas sur l'envoi réel.
+
 ## Règles anti-erreurs à respecter (rétro n°1)
 
 Lire `../REGLES-ERREURS-n8n.md` avant. Points clés ici : parse défensif du body (étape 3), un seul `=` par expression (vérifier via ⋯ → Export, chercher `"=="`), pas de `.first()` dans le nœud Code, On Error = Continue sur les 2 e-mails (le SMTP est bidon pour l'instant).
@@ -112,7 +118,7 @@ Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/evenement-adhesio
 Vérification dans **Executions** :
 - N1 : exécution verte → nœud `M-01 Confirmation au commerçant` → Output → le champ `text`/`subject` doit contenir « bien reçue » et « Boulangerie Meme » et « D1 ». (L'envoi SMTP lui-même échouera avec le credential bidon → nœud en erreur mais flux continue → réponse 200.)
 - N2 : nœud `M-03 Refus avec motif` → Output → le texte contient bien le motif « SIRET du siège… ».
-- N3 : aucune branche exécutée, réponse 200 `{"recu":true,"evenement":"bidule"}`.
+- N3 : événement inconnu → **aucun nœud e-mail exécuté**, mais le Respond répond quand même `200 {"recu":true,"evenement":"bidule"}` (grâce au fallback output 2). Dans Executions : l'exécution N3 ne montre que Webhook → Code → Switch → Respond.
 
 ## Livraison
 
