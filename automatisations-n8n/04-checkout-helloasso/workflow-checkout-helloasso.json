@@ -1,0 +1,298 @@
+{
+ "name": "MR - Checkout HelloAsso (/payer/{jeton})",
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "payer",
+    "responseMode": "responseNode",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2.2,
+   "position": [
+    -768,
+    16
+   ],
+   "id": "923bd3b3-1740-41c2-86de-33f6f5a5cbed",
+   "name": "Réception /payer/{jeton}",
+   "webhookId": "0ed1b019-1c56-4f7e-b121-4083742661d3"
+  },
+  {
+   "parameters": {
+    "mode": "runOnceForEachItem",
+    "jsCode": "let body = $json.body;\nif (typeof body === \"string\") { try { body = JSON.parse(body); } catch (e) { body = null; } }\nif (!body || typeof body !== \"object\" || Array.isArray(body)) body = $json;\nreturn { json: { payer_token: String(body.payer_token || body.token || \"\") } };"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    -544,
+    16
+   ],
+   "id": "cfc75e17-ed01-4c6f-a9ad-30523abec821",
+   "name": "Code in JavaScript"
+  },
+  {
+   "parameters": {
+    "url": "=https://api.madeleine-riviera.fr/items/demande_adhesion?filter[payer_token][_eq]={{ $json.payer_token }}&fields=id,email,nom_commercial,montant_eur,statut_adhesion",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "Bearer PLACEHOLDER"
+      }
+     ]
+    },
+    "options": {
+     "timeout": 10000
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.5,
+   "position": [
+    -320,
+    16
+   ],
+   "id": "f694c842-467b-4e59-af06-4cda84f28c2c",
+   "name": "PLACEHOLDER - Lire la demande par jeton",
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "strict",
+      "version": 4
+     },
+     "conditions": [
+      {
+       "id": "968983a5-2561-43b7-be98-e71d0ec07d21",
+       "leftValue": "={{ $json.data && $json.data.length > 0 }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2.4,
+   "position": [
+    -96,
+    16
+   ],
+   "id": "4eb9b4cb-7831-42de-aa7e-f966072d7f21",
+   "name": "Demande trouvée ?"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://api.helloasso-sandbox.com/oauth2/token",
+    "sendBody": true,
+    "contentType": "form-urlencoded",
+    "specifyBody": "string",
+    "body": "grant_type = client_credentials, client_id = PLACEHOLDER, client_secret = PLACEHOLDER",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.5,
+   "position": [
+    160,
+    -240
+   ],
+   "id": "62691244-307c-49a7-a764-e16c3ff403be",
+   "name": "Token OAuth2 HelloAsso",
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=https://api.helloasso-sandbox.com/v5/organizations/madeleine-riviera/checkout-intents",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "=Bearer {{ $('Token OAuth2 HelloAsso').item.jon.access_token }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={ \"totalAmount\": ($('PLACEHOLDER - Lire la demande par jeton').item.json.data[0].montant_eur || 100) * 100, \"initialAmount\": ($('PLACEHOLDER - Lire la demande par jeton').item.json.data[0].montant_eur || 100) * 100, \"itemName\": \"Cotisation Madeleine Riviera — 12 mois\", \"backRef\": String($('PLACEHOLDER - Lire la demande par jeton').item.json.data[0].id), \"containsDonation\": false, \"payer\": { \"email\": $('PLACEHOLDER - Lire la demande par jeton').item.json.data[0].email || \"\" }, \"metadata\": { \"adhesion_id\": String($('PLACEHOLDER - Lire la demande par jeton').item.json.data[0].id), \"payer_token\": $json.payer_token } }",
+    "options": {
+     "timeout": 10000
+    }
+   },
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.5,
+   "position": [
+    384,
+    -240
+   ],
+   "id": "60eabfa9-0f07-4dcb-868c-d3fbc66fc075",
+   "name": "Créer le checkout HelloAsso",
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "mode": "runOnceForEachItem",
+    "jsCode": "const cur = $json;\nif (cur && cur.error) return { json: { erreur: true, message: String(cur.error && cur.error.message || cur.error) } };\nreturn { json: { erreur: false, checkout_id: cur.id || null, redirectUrl: cur.redirectUrl || cur.checkoutIntentUrl || null } };"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    608,
+    -240
+   ],
+   "id": "d646cecf-6af8-4306-aa52-5e9af5d753c1",
+   "name": "Extraire redirectURL"
+  },
+  {
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={ \"redirectURL\": \"{{ $('Extraire redirectURL').item.json.redirectURL }}\" }",
+    "options": {
+     "responseCode": 200
+    }
+   },
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.5,
+   "position": [
+    832,
+    -240
+   ],
+   "id": "6725edfb-1345-40b5-8cbd-b53ab0777210",
+   "name": "200 redirectURL"
+  },
+  {
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={ \"error\": \"lien de paiement invalide ou expiré\" }",
+    "options": {
+     "responseCode": 404
+    }
+   },
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.5,
+   "position": [
+    160,
+    112
+   ],
+   "id": "9995f266-373c-44ca-bdfe-eb54ffd5822e",
+   "name": "404 lien invalide"
+  }
+ ],
+ "pinData": {},
+ "connections": {
+  "Réception /payer/{jeton}": {
+   "main": [
+    [
+     {
+      "node": "Code in JavaScript",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Code in JavaScript": {
+   "main": [
+    [
+     {
+      "node": "PLACEHOLDER - Lire la demande par jeton",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "PLACEHOLDER - Lire la demande par jeton": {
+   "main": [
+    [
+     {
+      "node": "Demande trouvée ?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Demande trouvée ?": {
+   "main": [
+    [
+     {
+      "node": "Token OAuth2 HelloAsso",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "404 lien invalide",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Token OAuth2 HelloAsso": {
+   "main": [
+    [
+     {
+      "node": "Créer le checkout HelloAsso",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Créer le checkout HelloAsso": {
+   "main": [
+    [
+     {
+      "node": "Extraire redirectURL",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Extraire redirectURL": {
+   "main": [
+    [
+     {
+      "node": "200 redirectURL",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "faux GET (test)": {
+   "main": [
+    []
+   ]
+  }
+ },
+ "active": false,
+ "settings": {
+  "executionOrder": "v1",
+  "binaryMode": "separate"
+ },
+ "versionId": "67a5e3c8-fff6-4606-a48e-64fa1f272c23",
+ "meta": {
+  "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
+ },
+ "nodeGroups": [],
+ "id": "A0iV5q4Az5hjppWI",
+ "tags": []
+}

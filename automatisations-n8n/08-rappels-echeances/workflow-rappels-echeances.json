@@ -1,0 +1,674 @@
+{
+  "name": "MR - Rappels et échéances (quotidien)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            },
+            {
+              "field": "timezone",
+              "timezone": "Europe/Paris"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -336,
+        -288
+      ],
+      "id": "e2ade679-45e7-4d50-b28f-d3e40cc52f91",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.madeleine-riviera.fr/items/demande_adhesion",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[statut][_eq]",
+              "value": "en_attente_paiement"
+            },
+            {
+              "name": "fields",
+              "value": "id,email,nom_commercial,payer_token,date_creation,m08_dernier_envoi"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        176,
+        -592
+      ],
+      "id": "a1cba94e-cfff-4751-9b3b-b15f1f875997",
+      "name": "PLACEHOLDER - Demandes en attente de paiement"
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $input.first().json;\nif (!Array.isArray(first.data)) throw new Error(\"Réponse inattendue de l'API (champ data absent) : \" + JSON.stringify(first).slice(0, 300));\nconst maintenant = new Date();\nreturn first.data.map(p => {\n  const cree = p.date_creation ? new Date(p.date_creation) : null;\n  const dernier = p.m08_dernier_envoi ? new Date(p.m08_dernier_envoi) : null;\n  const aRelancer = !!cree && !!p.email\n    && (maintenant - cree) > 3 * 86400000\n    && (!dernier || (maintenant - dernier) > 7 * 86400000);\n  return {\n    json: {\n      id: String(p.id), email: p.email || \"\", nom_commercial: p.nom_commercial || \"\",\n      payer_token: p.payer_token || \"\", a_relancer: aRelancer\n    },\n    pairedItem: { item: 0 }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -592
+      ],
+      "id": "2e50e727-bce0-459c-8fbf-ee382b716121",
+      "name": "Déplier demandes"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "46249f4e-e645-451c-af74-b33003657107",
+              "leftValue": "={{ $json.a_relancer === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        640,
+        -592
+      ],
+      "id": "7dd92ec2-fed9-492d-95ef-32f00aa90536",
+      "name": "À relancer ?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1008,
+        -384
+      ],
+      "id": "27f478c1-6eba-44f2-9932-ff68e9a00c5e",
+      "name": "Fin - pas de relance"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=site@madeleine-riviera.fr",
+        "toEmail": "={{ $json.email }}",
+        "subject": "=Relance — votre cotisation Madeleine Riviera est en attente",
+        "emailFormat": "text",
+        "text": "=Bonjour {{ $json.nom_commercial || \"cher commerçant\" }},\n\nVotre demande d'adhésion (n° {{ $json.id }}) a été validée, mais le paiement n'a pas été effectué.\n\nPour régler votre cotisation (100 €, 12 mois) :\nhttps://madeleine-riviera.fr/payer/{{ $json.payer_token }}\n\nL'association Madeleine Riviera",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        992,
+        -608
+      ],
+      "id": "47bdda38-4a92-4c24-a0b4-eba5a8e69925",
+      "name": "M-08 Paiement à finir - PLACEHOLDER SMTP",
+      "webhookId": "aca1ea20-942f-4d0f-a377-3bfc27fc0827",
+      "credentials": {
+        "smtp": {
+          "id": "w2k8Pr5aUQ9oektQ",
+          "name": "SMTP account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.madeleine-riviera.fr/items/demande_adhesion/{{ $('Déplier demandes').item.json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ m08_dernier_envoi: $now.toISO() }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1216,
+        -608
+      ],
+      "id": "16d58e8e-2d82-418f-8a31-801b0ed11b71",
+      "name": "PLACEHOLDER - Marquer M-08 envoyée"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        -608
+      ],
+      "id": "8fc9b4c3-5c01-4a74-ae77-c7e5871243c6",
+      "name": "Fin - relance envoyée"
+    },
+    {
+      "parameters": {
+        "url": "https://api.madeleine-riviera.fr/items/adhesion",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[statut][_eq]",
+              "value": "active"
+            },
+            {
+              "name": "fields",
+              "value": "id,email,nom_commercial,date_fin,m09_dernier_rappel"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        208,
+        0
+      ],
+      "id": "d5b50fca-9f76-4438-94d3-944bb96bbf05",
+      "name": "PLACEHOLDER - Adhésions actives"
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $input.first().json;\nif (!Array.isArray(first.data)) throw new Error(\"Réponse inattendue de l'API (champ data absent) : \" + JSON.stringify(first).slice(0, 300));\nconst maintenant = new Date();\nreturn first.data.map(a => {\n  let fin = a.date_fin ? new Date(a.date_fin) : null;\n  // date seule (AAAA-MM-JJ) : l'adhésion court jusqu'à la fin de ce jour\n  if (fin && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(a.date_fin))) fin = new Date(fin.getTime() + 86400000);\n  let action = \"rien\", cible = \"\", jours = null;\n  if (fin && fin < maintenant) {\n    action = \"echue\";\n  } else if (fin && a.email) {\n    jours = Math.ceil((fin - maintenant) / 86400000);\n    if (jours <= 30) { action = \"rappel\"; cible = \"J-30\"; }\n    else if (jours <= 90) { action = \"rappel\"; cible = \"J-90\"; }\n    if (action === \"rappel\" && a.m09_dernier_rappel === cible) action = \"rien\";\n  }\n  return {\n    json: {\n      id: String(a.id), email: a.email || \"\", nom_commercial: a.nom_commercial || \"\",\n      date_fin: a.date_fin || \"\", action, cible, jours_restants: jours\n    },\n    pairedItem: { item: 0 }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        0
+      ],
+      "id": "c40faf65-c146-4865-9bda-5058476bfb11",
+      "name": "Déplier adhésions"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "ab59f0d3-44bd-445b-a2a6-62e8b86db075",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "rappel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "9b360460-170e-4693-8bce-8a528e8f936b",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "echue",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        656,
+        -16
+      ],
+      "id": "070d43e5-16b9-49e1-b205-a045358f084c",
+      "name": "Quelle action ?"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=site@madeleine-riviera.fr",
+        "toEmail": "={{ $json.email }}",
+        "subject": "=Rappel — votre adhésion Madeleine Riviera expire dans {{ $json.jours_restants }} jours",
+        "emailFormat": "text",
+        "text": "=Bonjour {{ $json.nom_commercial || \"cher commerçant\" }},\n\nVotre adhésion à l'association Madeleine Riviera (adhésion n° {{ $json.id }}) arrive à échéance le {{ $json.date_fin }} — dans {{ $json.jours_restants }} jours ({{ $json.cible }}).\n\nSans renouvellement, votre fiche passera en « inactive » et sortira de l'annuaire à cette date.\n\nPour renouveler (12 mois) : connectez-vous à votre espace commerçant sur madeleine-riviera.fr.\n\nL'association Madeleine Riviera",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        944,
+        -112
+      ],
+      "id": "3374132a-ad8b-4596-b25d-acd69a5105aa",
+      "name": "M-09 Rappel renouvellement - PLACEHOLDER SMTP",
+      "webhookId": "3f7b5ae3-9613-4a3a-a1d5-bd083086cd07",
+      "credentials": {
+        "smtp": {
+          "id": "w2k8Pr5aUQ9oektQ",
+          "name": "SMTP account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.madeleine-riviera.fr/items/adhesion/{{ $('Déplier adhésions').item.json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ m09_dernier_rappel: $('Déplier adhésions').item.json.cible }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1168,
+        -112
+      ],
+      "id": "c22b7850-336d-4371-9ad8-e9ca364f88b1",
+      "name": "PLACEHOLDER - Marquer M-09 envoyée"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.madeleine-riviera.fr/items/adhesion/{{ $('Déplier adhésions').item.json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ statut: \"echue\" }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        944,
+        112
+      ],
+      "id": "a1d8d6bd-29ca-4a78-aa68-f956863a0f66",
+      "name": "PLACEHOLDER - Adhésion échue"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=site@madeleine-riviera.fr",
+        "toEmail": "={{ $('Déplier adhésions').item.json.email }}",
+        "subject": "=Votre adhésion Madeleine Riviera est arrivée à échéance",
+        "emailFormat": "text",
+        "text": "=Bonjour {{ $('Déplier adhésions').item.json.nom_commercial || \"cher commerçant\" }},\n\nVotre adhésion n° {{ $('Déplier adhésions').item.json.id }} est arrivée à échéance le {{ $('Déplier adhésions').item.json.date_fin }}.\n\nVotre fiche est désormais « inactive » : elle n'est plus visible sur madeleine-riviera.fr. Vos données sont conservées 6 mois.\n\nPour remettre votre fiche en ligne, renouvelez depuis votre espace commerçant.\n\nL'association Madeleine Riviera",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1168,
+        112
+      ],
+      "id": "929b55d6-cc06-4e35-b770-e3bb11e97cd1",
+      "name": "M-10 Adhésion échue - PLACEHOLDER SMTP",
+      "webhookId": "d403e91e-c62d-430b-8197-5e2a652adde6",
+      "credentials": {
+        "smtp": {
+          "id": "w2k8Pr5aUQ9oektQ",
+          "name": "SMTP account 4"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1648,
+        16
+      ],
+      "id": "685d73df-5d2e-4fec-9920-ee00c4013153",
+      "name": "Fin - adhésions traitées"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        800,
+        544
+      ],
+      "id": "7a9d3a39-8176-4852-8195-304493ae8c4c",
+      "name": "Erreur détectée"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=site@madeleine-riviera.fr",
+        "toEmail": "=bureau@madeleine-riviera.fr",
+        "subject": "=⚠️ Échec du workflow n8n : {{ $json.workflow.name }}",
+        "emailFormat": "text",
+        "text": "=Un workflow n8n a échoué.\n\nWorkflow : {{ $json.workflow.name }}\nNœud en erreur : {{ $json.execution.lastNodeExecuted }}\nMessage : {{ $json.execution.error.message }}\nExécution n° : {{ $json.execution.id }}\nLien : {{ $json.execution.url }}\n\nAction à prévoir : ouvrir l'exécution dans n8n, corriger la cause, puis relancer. Les envois déjà effectués ne sont pas rejoués ; ceux qui n'ont pas été faits reprendront au prochain passage quotidien.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1024,
+        544
+      ],
+      "id": "712ff888-8bde-4158-bf61-7bd7f388b507",
+      "name": "Alerte au bureau - erreur workflow",
+      "webhookId": "5d9c6a10-7e2b-4f3a-9b8c-aa1122334455",
+      "credentials": {
+        "smtp": {
+          "id": "w2k8Pr5aUQ9oektQ",
+          "name": "SMTP account 4"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Demandes en attente de paiement",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PLACEHOLDER - Adhésions actives",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Demandes en attente de paiement": {
+      "main": [
+        [
+          {
+            "node": "Déplier demandes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déplier demandes": {
+      "main": [
+        [
+          {
+            "node": "À relancer ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "À relancer ?": {
+      "main": [
+        [
+          {
+            "node": "M-08 Paiement à finir - PLACEHOLDER SMTP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - pas de relance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "M-08 Paiement à finir - PLACEHOLDER SMTP": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Marquer M-08 envoyée",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Marquer M-08 envoyée": {
+      "main": [
+        [
+          {
+            "node": "Fin - relance envoyée",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Adhésions actives": {
+      "main": [
+        [
+          {
+            "node": "Déplier adhésions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déplier adhésions": {
+      "main": [
+        [
+          {
+            "node": "Quelle action ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quelle action ?": {
+      "main": [
+        [
+          {
+            "node": "M-09 Rappel renouvellement - PLACEHOLDER SMTP",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PLACEHOLDER - Adhésion échue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - adhésions traitées",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "M-09 Rappel renouvellement - PLACEHOLDER SMTP": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Marquer M-09 envoyée",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Marquer M-09 envoyée": {
+      "main": [
+        [
+          {
+            "node": "Fin - adhésions traitées",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Adhésion échue": {
+      "main": [
+        [
+          {
+            "node": "M-10 Adhésion échue - PLACEHOLDER SMTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "M-10 Adhésion échue - PLACEHOLDER SMTP": {
+      "main": [
+        [
+          {
+            "node": "Fin - adhésions traitées",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erreur détectée": {
+      "main": [
+        [
+          {
+            "node": "Alerte au bureau - erreur workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
+  },
+  "nodeGroups": [],
+  "id": "3165f2b8-c6fe-4e9f-b94e-6c605138ceab",
+  "tags": []
+}

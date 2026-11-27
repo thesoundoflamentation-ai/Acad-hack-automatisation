@@ -1,0 +1,543 @@
+{
+  "name": "MR - Réconciliation HelloAsso (quotidienne) + alerte erreur",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## À trancher avant la production\n\n**Lien paiement → adhésion** : le rattrapage n'envoie ni `adhesion_id` ni `payer_token` (ils viennent des metadata du webhook). Soit les récupérer côté HelloAsso si l'API les expose, soit rapprocher par l'e-mail du payeur dans Directus.\n\n**Jeton d'activation** : `jeton=PLACEHOLDER` dans l'e-mail.\n\n**Pagination** : pageSize=100, au-delà les paiements sont ignorés.\n\n**Erreurs** : les nœuds HTTP arrêtent le workflow en cas d'erreur (aucun mail n'est envoyé si l'enregistrement échoue).\n\n**URL** : passer api.helloasso-sandbox.com → api.helloasso.com au lancement.",
+        "height": 380,
+        "width": 460
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -48,
+        176
+      ],
+      "id": "5b3d8020-2482-42e5-8e7f-c26c18ba9077",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2224,
+        -96
+      ],
+      "id": "bd38e2cd-06c8-440e-b032-be1c7136645e",
+      "name": "Fin - paiement rattrapé"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=site@madeleine-riviera.fr",
+        "toEmail": "={{ ($('Lire la commande HelloAsso').item.json.payer || {}).email || \"\" }}",
+        "subject": "=Bienvenue chez Madeleine Riviera — votre adhésion est active",
+        "emailFormat": "text",
+        "text": "=Bonjour {{ ($('Lire la commande HelloAsso').item.json.payer || {}).firstName || \"\" }},\n\nVotre paiement de {{ ($('Déplier les paiements').item.json.montant_centimes || 0) / 100 }} € a bien été confirmé.\n\nVotre adhésion à l'association Madeleine Riviera est active pour 12 mois.\n\nActivez votre espace commerçant pour publier votre fiche :\nhttps://madeleine-riviera.fr/activer-compte?jeton=PLACEHOLDER\n\nL'association Madeleine Riviera",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2000,
+        -96
+      ],
+      "id": "2024cf1e-1285-4494-867f-db57a428d800",
+      "name": "M-05 Bienvenue (rattrapage) - PLACEHOLDER SMTP",
+      "webhookId": "83a871a2-9efc-4e7a-9429-29899f365c23",
+      "credentials": {
+        "smtp": {
+          "id": "w2k8Pr5aUQ9oektQ",
+          "name": "SMTP account 4"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.madeleine-riviera.fr/items/evenement_paiement",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"helloasso_event_id\": $('Déplier les paiements').item.json.payment_id, \"helloasso_order_id\": $('Déplier les paiements').item.json.order_id, \"montant_centimes\": $('Déplier les paiements').item.json.montant_centimes, \"date_paiement\": $('Déplier les paiements').item.json.date_paiement, \"statut\": \"traite\", \"source\": \"reconciliation\" }",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1776,
+        -96
+      ],
+      "id": "6dbeb48e-d80f-4881-845b-52d4aad99a54",
+      "name": "PLACEHOLDER - Enregistrer l'événement de paiement (rattrapage)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.helloasso-sandbox.com/v5/orders/{{ $('Déplier les paiements').item.json.order_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Token OAuth2 HelloAsso').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1552,
+        -96
+      ],
+      "id": "1f8d2e81-db46-4993-9eab-fe129ca7212e",
+      "name": "Lire la commande HelloAsso",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        -368
+      ],
+      "id": "81c33c6a-3abc-4f23-a1bc-931164c7e23a",
+      "name": "Fin - déjà traité"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "c6e42efb-e036-42bd-bdf7-1fda4e306c8e",
+              "leftValue": "={{ Array.isArray($json.data) && $json.data.length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1296,
+        -192
+      ],
+      "id": "3b443c0c-8385-49a2-abac-4681a635f600",
+      "name": "Déjà traité ?"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.madeleine-riviera.fr/items/evenement_paiement?filter[helloasso_event_id][_eq]={{ $json.payment_id }}&fields=id,statut",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[helloasso_event_id][_eq]",
+              "value": "={{ $json.payment_id }}"
+            },
+            {
+              "name": "fields",
+              "value": "id,statut"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1072,
+        -192
+      ],
+      "id": "0ae0e144-44f4-453f-b1a6-8a101d0218f4",
+      "name": "PLACEHOLDER - Événement déjà traité ?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        96
+      ],
+      "id": "145250b5-11d5-46d1-b0a7-dc8501de5e17",
+      "name": "Fin - paiement non autorisé"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "5e1829b7-cd2b-4d9a-be60-9f1615c9e974",
+              "leftValue": "={{ $json.state === \"Authorized\" }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        848,
+        -64
+      ],
+      "id": "48a05346-8670-4967-aed2-4a71c32f2b70",
+      "name": "Paiement autorisé ?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $json;\nconst d = Array.isArray(first.data) ? first.data : [];\nreturn d.map(p => ({\n  json: {\n    payment_id: String(p.id),\n    order_id: String(p.order && p.order.id != null ? p.order.id : (p.orderId != null ? p.orderId : \"\")),\n    montant_centimes: (p.amount != null) ? p.amount : null,\n    date_paiement: p.date || \"\",\n    state: p.state || \"\"\n  },\n  pairedItem: { item: 0 }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -64
+      ],
+      "id": "b92baf1e-f36a-4d50-8e03-571d4ec57ce2",
+      "name": "Déplier les paiements"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.helloasso-sandbox.com/v5/organizations/madeleine-riviera/payments?from={{ encodeURIComponent($now.minus(1, \"days\").toISO()) }}&to={{ encodeURIComponent($now.toISO()) }}&pageSize=100",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Token OAuth2 HelloAsso').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        400,
+        -64
+      ],
+      "id": "92a8cbc1-b880-4da9-8f33-589ceeffa054",
+      "name": "Lister les paiements de la veille",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.helloasso-sandbox.com/oauth2/token",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "specifyBody": "string",
+        "body": "grant_type=client_credentials&client_id=PLACEHOLDER&client_secret=PLACEHOLDER",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        176,
+        -64
+      ],
+      "id": "82eafebd-b2da-44fa-b54e-be58507d24e1",
+      "name": "Token OAuth2 HelloAsso",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            },
+            {
+              "field": "timezone",
+              "timezone": "Europe/Paris"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -48,
+        -64
+      ],
+      "id": "0942ac80-2055-4772-9f67-58f7a85a5175",
+      "name": "Tous les jours à 6h"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        1088,
+        304
+      ],
+      "id": "c6f0e52a-497c-4f23-bc2f-55ffbab859c6",
+      "name": "Erreur détectée"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=site@madeleine-riviera.fr",
+        "toEmail": "=bureau@madeleine-riviera.fr",
+        "subject": "=⚠️ Échec du workflow n8n : {{ $json.workflow.name }}",
+        "emailFormat": "text",
+        "text": "=Un workflow n8n a échoué.\n\nWorkflow : {{ $json.workflow.name }}\nNœud en erreur : {{ $json.execution.lastNodeExecuted }}\nMessage : {{ $json.execution.error.message }}\nExécution n° : {{ $json.execution.id }}\nLien : {{ $json.execution.url }}\n\nAction à prévoir : ouvrir l'exécution dans n8n, corriger la cause, puis relancer. Les paiements non traités ne sont pas repris automatiquement.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1312,
+        304
+      ],
+      "id": "4fb91eab-e9ab-4806-ac37-b3646d3b8785",
+      "name": "Alerte au bureau - erreur workflow",
+      "webhookId": "5d9c6a10-7e2b-4f3a-9b8c-aa1122334455",
+      "credentials": {
+        "smtp": {
+          "id": "w2k8Pr5aUQ9oektQ",
+          "name": "SMTP account 4"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "M-05 Bienvenue (rattrapage) - PLACEHOLDER SMTP": {
+      "main": [
+        [
+          {
+            "node": "Fin - paiement rattrapé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Enregistrer l'événement de paiement (rattrapage)": {
+      "main": [
+        [
+          {
+            "node": "M-05 Bienvenue (rattrapage) - PLACEHOLDER SMTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire la commande HelloAsso": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Enregistrer l'événement de paiement (rattrapage)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déjà traité ?": {
+      "main": [
+        [
+          {
+            "node": "Fin - déjà traité",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lire la commande HelloAsso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Événement déjà traité ?": {
+      "main": [
+        [
+          {
+            "node": "Déjà traité ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paiement autorisé ?": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Événement déjà traité ?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - paiement non autorisé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déplier les paiements": {
+      "main": [
+        [
+          {
+            "node": "Paiement autorisé ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lister les paiements de la veille": {
+      "main": [
+        [
+          {
+            "node": "Déplier les paiements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token OAuth2 HelloAsso": {
+      "main": [
+        [
+          {
+            "node": "Lister les paiements de la veille",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tous les jours à 6h": {
+      "main": [
+        [
+          {
+            "node": "Token OAuth2 HelloAsso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erreur détectée": {
+      "main": [
+        [
+          {
+            "node": "Alerte au bureau - erreur workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
+  },
+  "nodeGroups": [],
+  "id": "17c13d85-6f3b-4c84-b043-6446ed876601",
+  "tags": []
+}
