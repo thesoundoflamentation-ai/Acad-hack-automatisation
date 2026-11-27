@@ -37,7 +37,7 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 | 9 | `09-photos/` | Toutes les 5 min : contrôle type réel, ré-encodage (EXIF/GPS supprimés), publication, refus notifié | ⏸️ reporté — hors board Excalidraw (décision 27/11, à valider avec le bureau) |
 | 10 | `10-purges-sauvegarde/` | Cron : purges RGPD (messages 1 an, demandes 1 an, comptes échus 6 mois, conversations chatbot 30 j) + dump PG chiffré → S3 + export workflows | ⏸️ reporté — hors board Excalidraw (décision 27/11) ; ⚠️ obligations RGPD §6.5 + sauvegarde à ne pas oublier en prod |
 | 11 | `11-copilote-ia/` | Copilote IA : Workers AI (Llama 3.3 70B) + skill → 2 versions ≤ 300 car. → filtre CP-10 → Directus (version_ia_1/2, alerte_moderation) | ✅ **VALIDÉE** — recette C1–C4 OK ; export final `workflow-copilote-ia.json` (skill réel injecté + anti-injection, webhook **Header Auth** placeholder, Never Error sur l'appel IA, PATCH IA indisponible sur branche false) |
-| 12 | `12-chatbot-ia/` | Index pgvector des contenus publics + webhook question → Llama 3.3 70B → réponse + liens ; repli recherche simple si quota (IA-01…IA-09) | ⬜ à faire |
+| 12 | `12-chatbot-ia/` | Chatbot IA : webhook question → embedding bge-m3 → 3 extraits pgvector → Llama 3.3 70B + skill → réponse + liens ; repli recherche plein texte + alerte bureau si quota (IA-01…IA-10) ; index `ia_index` maintenu par Flow Directus + rebuild nightly | 🟡 en cours — branche `vibe/chatbot-ia-182b13` (PR #9, à construire dans n8n) |
 | 13 | `13-bilan-assistant/` | Bilan mensuel B-12 au bureau (questions, sans réponse, jours quota épuisé) | ⏸️ reporté — hors board Excalidraw (décision 27/11) |
 | 14 | `14-newsletter/` | Newsletter (hors MVP, processus Excalidraw) | ⬜ à faire |
 
