@@ -39,7 +39,7 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 | 11 | `11-copilote-ia/` | Copilote IA : Workers AI (Llama 3.3 70B) + skill → 2 versions ≤ 300 car. → filtre CP-10 → Directus (version_ia_1/2, alerte_moderation) | ✅ **VALIDÉE** — recette C1–C4 OK ; export final `workflow-copilote-ia.json` (skill réel injecté + anti-injection, webhook **Header Auth** placeholder, Never Error sur l'appel IA, PATCH IA indisponible sur branche false) |
 | 12 | `12-chatbot-ia/` | Chatbot IA : webhook question → embedding bge-m3 → 3 extraits pgvector → Llama 3.3 70B + skill → réponse + liens ; repli recherche plein texte + alerte bureau si quota (IA-01…IA-10) ; index `ia_index` maintenu par Flow Directus + rebuild nightly 3h (Paris) | ✅ **VALIDÉE** — recette CH1–CH3 + I1–I3 OK ; exports nettoyés `workflow-chatbot.json` (skill injecté, Header Auth, Never Error, repli 3 entrées) + `workflow-index-ia.json` (upsert/delete, SQL en littéral, cron 3h Paris) |
 | 13 | `13-bilan-assistant/` | Bilan mensuel B-12 au bureau (questions, sans réponse, jours quota épuisé) | ⏸️ reporté — hors board Excalidraw (décision 27/11) |
-| 14 | `14-newsletter/` | Newsletter (hors MVP, processus Excalidraw) | ⬜ à faire |
+| 14 | `14-newsletter/` | Newsletter : webhook « Envoyer » (Flow Directus) → liste adhérents actifs avec case newsletter (e-mails perso+pro dédupliqués) → envoi individuel + journal de l'envoi (`envoi_newsletter`) | 🟡 en cours — branche `vibe/newsletter-182b13` (PR #10, à construire dans n8n) |
 
 ## Celle que le groupe fait seul
 
