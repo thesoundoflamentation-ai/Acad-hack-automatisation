@@ -1,20 +1,22 @@
 # N°14 — Newsletter (envoi manuel au bureau → liste des abonnés → journal)
 
-Branche : `vibe/newsletter-182b13` — à construire **à la main dans n8n**, export JSON envoyé pour push ici après validation.
+Branche : `vibe/newsletter-182b13` (PR #10) — ✅ **VALIDÉ**, export final nettoyé versionné ici : **`workflow-newsletter.json`**.
 
 Processus (board Excalidraw « newsletter », 24/11) : le bureau rédige le mail et clique « Envoyer » → Flow Directus appelle le webhook n8n → n8n récupère la **liste des adhérents actifs ayant coché « newsletter »** (e-mails perso et pro, dédupliqués) → envoi **individuel** (jamais de BCC de masse) → **journal de l'envoi** (date, liste, statut « envoyé ») → réponse 200.
 
 RGPD : consentement = case « newsletter » cochée (fonctionnel §6.3) ; chaque mail contient un pied de désinscription ; le journal reste côté back-office (bureau seul).
 
-## Contrat du webhook (placeholder)
+## Contrat du webhook
 
-`POST /webhook/envoi-newsletter` — **Header Auth** (règle 21, credential placeholder `MR - secret webhook newsletter`) — body :
+`PATCH /webhook/envoi-newsletter` (la Flow Directus appelle en **PATCH**) — **Header Auth** (règle 21, credential placeholder `MR - secret webhook newsletter`) — body :
 
 ```json
 { "sujet": "Les nouveautés du boulevard — novembre", "texte": "Bonjour, ..." }
 ```
 
-Réponses : 200 `{"envoyes":12,"erreurs":0,"journal_id":"..."}` ou 400 `{"erreur":"sujet et texte requis"}`.
+Réponses : 200 `{"envoyes":12,"erreurs":0,"total":12}` ou 200 `{"envoyes":0,...,"remarque":"aucun abonné newsletter"}` ou 400 `{"erreur":"sujet et texte requis"}`.
+
+> API livrée le 27/11 : **`https://site.g3.madeleine-riviera.fr/api/n8n`** — l'URL réelle est renseignée en clair dans le JSON (ce n'est pas un secret). Seuls les jetons/secrets restent dans les credentials n8n, jamais dans le repo.
 
 ## Schéma
 
@@ -53,7 +55,7 @@ return { json: { sujet, texte, valide: !!(sujet && texte) } };
 
 ### 4. HTTP GET `PLACEHOLDER - Liste des abonnés`
 
-URL fixe `https://api.madeleine-riviera.fr/items/adhesion`, header `Authorization` = `Bearer PLACEHOLDER`, **Send Query Parameters** (règle 19 — filtres en paramètres, pas dans l'URL) :
+URL fixe `https://site.g3.madeleine-riviera.fr/api/n8n/items/adhesion`, authentification par **credential Header Auth** (`authentication: genericCredentialType`, `genericAuthType: httpHeaderAuth`, credential placeholder `MR - API n8n (header)` — le secret n'est pas dans le repo), **Send Query Parameters** (règle 19 — filtres en paramètres, pas dans l'URL) :
 
 | Name | Value |
 |---|---|
@@ -89,18 +91,15 @@ return out;
 
 Après le Code, utiliser `$input.all().length` : `={{ $input.all().length > 0 }}` is true → étape 7. false → Respond `200 - aucun abonné` (`={{ JSON.stringify({ envoyes: 0, erreurs: 0, remarque: "aucun abonné newsletter" }) }}`, code 200).
 
-### 7. E-mail `Envoyer la newsletter`
+### 7. HTTP `Envoyer la newsletter (API /email)`
 
-- From : `site@madeleine-riviera.fr` (fixe)
-- To : `={{ $json.email }}` (un item = un destinataire)
-- Subject : `={{ $('Normaliser la demande').item.json.sujet }}` (règle 16)
-- Format : text. Texte :
+Envoi via l'API livrée (plus de nœud SMTP sur ce workflow) : POST `https://site.g3.madeleine-riviera.fr/api/n8n/email`, credential Header Auth `MR - API n8n (header)`, body JSON (règles 3 + 16) :
 
 ```
-={{ $('Normaliser la demande').item.json.texte + "\n\n---\nAssociation Madeleine Riviera — boulevard de la Madeleine, Nice.\nVous recevez ce message car vous avez coché « newsletter » lors de votre adhésion.\nPour ne plus recevoir la newsletter : répondez « STOP » à ce message ou connectez-vous à votre espace.\n" }}
+={{ JSON.stringify({ to: $json.email, subject: $('Normaliser la demande').item.json.sujet, text: $('Normaliser la demande').item.json.texte + "\n\n---\nAssociation Madeleine Riviera — boulevard de la Madeleine, Nice.\nVous recevez ce message car vous avez coché « newsletter » lors de votre adhésion.\nPour ne plus recevoir la newsletter : répondez « STOP » à ce message ou connectez-vous à votre espace.\n" }) }}
 ```
 
-Credential SMTP « SMTP account 4 » (placeholder), **On Error = Continue** (un échec n'arrête pas le lot).
+Un item = un destinataire. **On Error = Continue** (un échec n'arrête pas le lot) + Never Error + timeout 20000.
 
 ### 8. Code `Compter les envois` — mode **Run Once for All Items**
 
@@ -117,7 +116,7 @@ return [{ json: {
 
 ### 9. HTTP POST `PLACEHOLDER - Journal de l'envoi`
 
-URL `https://api.madeleine-riviera.fr/items/envoi_newsletter`, headers `Authorization` = `Bearer PLACEHOLDER` + `Content-Type: application/json`, body (règle 16) :
+URL `https://site.g3.madeleine-riviera.fr/api/n8n/items/envoi_newsletter`, credential Header Auth `MR - API n8n (header)` + header `Content-Type: application/json`, body (règle 16) :
 
 ```
 ={{ JSON.stringify({ date: $now.toISO(), sujet: $('Compter les envois').item.json.sujet, nb_envoyes: $('Compter les envois').item.json.envoyes, nb_erreurs: $('Compter les envois').item.json.erreurs, statut: "envoye", destinataires: $('Compter les envois').item.json.destinataires }) }}
@@ -166,15 +165,23 @@ Invoke-RestMethod -Uri "https://n8n.acadenice.com/webhook-test/envoi-newsletter"
 
 Puis remets le vrai GET, Save, aucun FAUX dans l'export final.
 
+## Fichier final ✅
+
+`workflow-newsletter.json` = export « MR - Newsletter » nettoyé (14 nœuds, `pinData` vide, zéro `==`, zéro `.first()`, `active: false`, ids neufs) :
+
+- webhook `envoi-newsletter` en **PATCH** + Header Auth, credential placeholder `MR - secret webhook newsletter` ;
+- API livrée en clair : `https://site.g3.madeleine-riviera.fr/api/n8n/...` ; **aucun secret en clair** (vérifié au nettoyage) — les credentials restent en placeholder : `MR - API n8n (header)` sur les 3 HTTP ;
+- envoi des mails via l'API `POST /api/n8n/email` (plus de SMTP ici), Never Error + On Error Continue + timeouts ;
+- `.first()` → `.item.json` (règle 2) ; journal `envoi_newsletter` en POST.
+
 ## Livraison
 
-Quand N1–N3 sont OK : ⋯ → **Export** → envoie-moi le JSON (zéro `==`, `pinData` vide, pas de FAUX) → push dans `14-newsletter/workflow-newsletter.json` sur cette branche, merge vers `main` (PR #10).
+N1–N3 OK → merge vers `main` (PR #10 à fermer dans l'UI).
 
 ## Checklist après import
 
-1. Credential **Header Auth** `MR - secret webhook newsletter` sur le webhook (envoyé par la Flow Directus « Envoyer la newsletter », jamais dans le repo).
-2. SMTP : remplacer « SMTP account 4 » par le vrai Scaleway TEM.
-3. ⋯ → Settings → Error workflow → ce workflow lui-même.
-4. Côté devs à confirmer : champ `newsletter` + `email_pro` sur `adhesion`, collection `envoi_newsletter`, et la Flow Directus qui appelle le webhook avec `{sujet, texte}`.
+1. Credentials à créer : **Header Auth** `MR - secret webhook newsletter` (sur le webhook, envoyé par la Flow Directus « Envoyer ») et **Header Auth** `MR - API n8n (header)` (sur les 3 nœuds HTTP — valeur = secret de l'API livrée). Jamais de secret dans le repo.
+2. ⋯ → Settings → Error workflow → ce workflow lui-même (l'alerte passe par `POST /api/n8n/email`, plus de SMTP sur ce workflow).
+3. Côté devs à confirmer : champ `newsletter` + `email_pro` sur `adhesion`, collection `envoi_newsletter`, contrat PATCH `{sujet, texte}` de la Flow Directus.
 
-⚠️ Placeholders à remplacer à la livraison : `https://api.madeleine-riviera.fr` + `Bearer PLACEHOLDER`, secret Header Auth.
+ℹ️ L'URL de l'API livrée est en clair dans le JSON (pas un secret) ; seuls les credentials sont en placeholder.
