@@ -1,0 +1,40 @@
+# Filtre CP-10 — mots/expressions interdits dans les versions IA (copilote)
+# Source : cahier des charges technique v0.5 §16.2 (liste CP-10).
+# Normalisation appliquée avant test : minuscules, accents supprimés, espaces normalisés.
+# Une version contenant un de ces termes est écartée (non montrée au commerçant).
+
+# Superlatifs et classements
+meilleur
+le plus
+la plus
+les plus
+n°1
+no 1
+imbattable
+exceptionnel
+
+# Prix
+moins cher
+prix bas
+petit prix
+pas cher
+
+# Affirmations à prouver
+bio
+biologique
+label
+certifié
+certifie
+garanti
+
+# Santé (promesses)
+une seule séance
+une seule seance
+gueri
+guerison
+
+# Complément catégorie Santé (CP-11) — à ajouter si categorie = Santé
+soulage
+retrouver votre forme
+retrouve ta forme
+resultat
