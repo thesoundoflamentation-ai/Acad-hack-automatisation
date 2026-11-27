@@ -1,296 +1,342 @@
 {
- "name": "MR - Contrôle SIRET à la demande d'adhésion (B-14, §5.7)",
- "nodes": [
-  {
-   "parameters": {
-    "httpMethod": "POST",
-    "path": "demande-adhesion",
-    "responseMode": "responseNode",
-    "options": {}
-   },
-   "type": "n8n-nodes-base.webhook",
-   "typeVersion": 2.2,
-   "position": [
-    592,
-    -80
-   ],
-   "id": "9a1e1720-14ab-4075-9c4f-a6d0d8c5546b",
-   "name": "Réception demande d'hadésion",
-   "webhookId": "9fe79c97-54df-4d95-afee-e54c2741eda8"
-  },
-  {
-   "parameters": {
-    "mode": "runOnceForEachItem",
-    "jsCode": "// Le webhook peut fournir le body en objet OU en chaîne (selon Content-Type) : on parse si besoin.\nlet body = $json.body;\nif (typeof body === \"string\") { try { body = JSON.parse(body); } catch (e) { body = null; } }\nif (!body || typeof body !== \"object\" || Array.isArray(body)) body = $json;\nconst siretBrut = String(body.siret || body.numero_siret || body.SIRET || \"\");\nconst siret = siretBrut.replace(/[\\s.\\-]/g, \"\");\nfunction luhnOk(s){let sum=0;for(let i=0;i<s.length;i++){let d=+s[s.length-1-i];if(i%2===1){d*=2;if(d>9)d-=9;}sum+=d;}return sum%10===0;}\nconst siretFormatOk = /^\\d{14}$/.test(siret) && luhnOk(siret);\nreturn {\n  json: {\n    body: {\n      demande_id: body.demande_id || body.id || null,\n      siret: siretBrut,\n      adresse: body.adresse || \"\",\n      representant: body.representant || [body.representant_prenom, body.representant_nom].filter(Boolean).join(\" \"),\n      nom_commercial: body.nom_commercial || \"\",\n      email: body.email || \"\"\n    },\n    siret: siret,\n    siretFormatOk: siretFormatOk\n  }\n};"
-   },
-   "type": "n8n-nodes-base.code",
-   "typeVersion": 2,
-   "position": [
-    816,
-    -80
-   ],
-   "id": "5fdc9a37-5ae0-44da-8f7c-7561d57f62a0",
-   "name": "Préparer le contrôle"
-  },
-  {
-   "parameters": {
-    "conditions": {
-     "options": {
-      "caseSensitive": true,
-      "leftValue": "",
-      "typeValidation": "strict",
-      "version": 4
-     },
-     "conditions": [
-      {
-       "id": "c8f6e3be-4113-4eca-81a1-7edde4d3f933",
-       "leftValue": "={{ $json.siretFormatOk }}",
-       "rightValue": "",
-       "operator": {
-        "type": "boolean",
-        "operation": "true",
-        "singleValue": true
-       }
-      }
-     ],
-     "combinator": "and"
-    },
-    "options": {}
-   },
-   "type": "n8n-nodes-base.if",
-   "typeVersion": 2.4,
-   "position": [
-    1040,
-    -80
-   ],
-   "id": "a7542e00-c73c-4a46-ad44-0539f71debd2",
-   "name": "Siret au bon format ?"
-  },
-  {
-   "parameters": {
-    "url": "=https://recherche-entreprises.api.gouv.fr/search?q={{ $json.siret }}&per_page=1&minimal=true&include=siege,dirigeants,matching_etablissements,complements",
-    "sendHeaders": true,
-    "headerParameters": {
-     "parameters": [
-      {
-       "name": "accept",
-       "value": "application/json"
+  "name": "MR - Demande d'adhésion (contrôle SIRET)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "demande-adhesion",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
       },
-      {
-       "name": "User-Agent",
-       "value": "madeleine-riviera-site/1.0 (contact: bureau@madeleine-riviera.fr)"
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        -192
+      ],
+      "id": "591c21e0-b32d-4219-b1df-5afa0fae8b46",
+      "name": "Réception demande d'adhésion",
+      "webhookId": "9fe79c97-54df-4d95-afee-e54c2741eda8",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - secret webhook demande-adhesion"
+        }
       }
-     ]
     },
-    "options": {
-     "response": {
-      "response": {
-       "neverError": true
-      }
-     },
-     "timeout": 10000
-    }
-   },
-   "type": "n8n-nodes-base.httpRequest",
-   "typeVersion": 4.5,
-   "position": [
-    1280,
-    -304
-   ],
-   "id": "5257c35c-f9bb-4122-8ce3-2781a3f881f2",
-   "name": "API Recherche d'entreprises (État)",
-   "onError": "continueRegularOutput"
-  },
-  {
-   "parameters": {
-    "mode": "runOnceForEachItem",
-    "jsCode": "function normaliser(s) {\n  if (!s) return \"\";\n  return s.toString().normalize(\"NFD\").replace(/[̀-ͯ]/g, \"\")\n    .toUpperCase().replace(/[^A-Z0-9]/g, \" \").replace(/\\s+/g, \" \").trim();\n}\nfunction luhnOk(siret) {\n  let sum = 0;\n  for (let i = 0; i < siret.length; i++) {\n    let d = parseInt(siret[siret.length - 1 - i], 10);\n    if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }\n    sum += d;\n  }\n  return sum % 10 === 0;\n}\nfunction validerSiret(brut) {\n  const s = (brut || \"\").toString().replace(/[\\s.-]/g, \"\");\n  if (!/^\\d{14}$/.test(s)) return { ok: false, siret: s, raison: \"14 chiffres requis\" };\n  if (!luhnOk(s)) return { ok: false, siret: s, raison: \"Clé de contrôle invalide\" };\n  return { ok: true, siret: s };\n}\nfunction trouverEtab(rep, siret) {\n  const r = rep.results && rep.results[0];\n  if (!r) return null;\n  const m = (r.matching_etablissements || []).find(e => e.siret === siret);\n  if (m) return { unite: r, etab: m };\n  if (r.siege && r.siege.siret === siret) return { unite: r, etab: r.siege };\n  return { unite: r, etab: r.siege };\n}\nfunction adresseCorrespond(adresseSaisie, etab) {\n  const a = normaliser(adresseSaisie || \"\");\n  if (!a) return true;\n  const cp = (etab.code_postal || \"\").toString();\n  const commune = normaliser(etab.libelle_commune);\n  const voie = normaliser((etab.libelle_voie || \"\") + \" \" + (etab.numero_voie || \"\"));\n  const cpOk = !cp || a.includes(cp);\n  const communeOk = !commune || a.includes(commune);\n  const voieOk = !voie.trim() || a.includes(normaliser(etab.libelle_voie || \"\")) || a.includes(voie);\n  return cpOk && communeOk && voieOk;\n}\nfunction representantTrouve(repSaisi, unite) {\n  const r = normaliser(repSaisi || \"\");\n  if (!r) return null;\n  const tokens = r.split(\" \").filter(Boolean);\n  const dirigeants = (unite.dirigeants || []).filter(d => d.type_dirigeant === \"personne physique\");\n  const trouve = dirigeants.some(d => {\n    const dn = normaliser(d.nom || \"\");\n    const dp = normaliser(d.prenoms || \"\");\n    if (!dn) return false;\n    if (tokens.length === 1) return dn.includes(tokens[0]) || tokens[0].includes(dn);\n    const dansNom = tokens.some(t => dn.includes(t) || t.includes(dn));\n    const dansPrenoms = !dp || tokens.some(t => dp.includes(t));\n    return dansNom && dansPrenoms;\n  });\n  if (!trouve && unite.complements && unite.complements.est_entrepreneur_individuel) {\n    return tokens.some(t => normaliser(unite.nom_complet || \"\").includes(t));\n  }\n  return trouve;\n}\nfunction buildResultat(input) {\n  const body = input.body || {};\n  const v = validerSiret(body.siret);\n  const base = {\n    effectue_le: new Date().toISOString(),\n    source: \"recherche-entreprises.api.gouv.fr\",\n    siret_controle: v.siret || null,\n    statut: null, controles: [], donnees_api: null\n  };\n  const push = (id, ok, label, attendu, saisi) => {\n    base.controles.push({ id, ok, label, attendu: attendu || null, saisi: saisi || null });\n  };\n  if (!v.ok) {\n    push(\"format_siret\", false, \"Format du SIRET invalide\", \"14 chiffres avec clé de contrôle valide\", body.siret);\n    base.statut = \"a_verifier\";\n    return base;\n  }\n  if (input.apiError || !input.api) {\n    base.statut = \"non_effectue\";\n    base.controles.push({ id: \"api\", ok: false, label: \"API indisponible : contrôle non effectué, vérification manuelle requise\", attendu: null, saisi: null });\n    return base;\n  }\n  const rep = input.api;\n  if (!rep.results || rep.results.length === 0) {\n    push(\"siret_existe\", false, \"SIRET introuvable ou établissement fermé\", \"Un établissement actif correspondant au SIRET saisi\", v.siret);\n    base.statut = \"a_verifier\";\n    return base;\n  }\n  const { unite, etab } = trouverEtab(rep, v.siret);\n  const actif = etab.etat_administratif === \"A\" && !etab.date_fermeture;\n  push(\"etablissement_actif\", actif,\n    actif ? \"Établissement actif\" : \"Établissement fermé\",\n    \"Établissement actif (état A)\",\n    etab.etat_administratif === \"A\" ? \"Actif\" : \"Fermé\" + (etab.date_fermeture ? \" le \" + etab.date_fermeture : \"\"));\n  const estSiege = etab.est_siege === true || (unite.siege && unite.siege.siret === v.siret);\n  const adresseSaisie = body.adresse || \"\";\n  const siegeAilleurs = estSiege && unite.siege && adresseSaisie && !adresseCorrespond(adresseSaisie, unite.siege);\n  push(\"siret_siege\", !siegeAilleurs,\n    siegeAilleurs ? \"SIRET du siège : demander le SIRET du commerce du boulevard\" : \"SIRET d'établissement (hors siège) ou siège à l'adresse saisie\",\n    unite.siege ? unite.siege.adresse : null, adresseSaisie || null);\n  const adrOk = adresseCorrespond(adresseSaisie, etab);\n  push(\"adresse\", adrOk,\n    adrOk ? \"Adresse conforme\" : \"Adresse différente de celle du registre\",\n    etab.adresse || null, adresseSaisie || null);\n  const repOk = representantTrouve(body.representant, unite);\n  if (repOk !== null) {\n    push(\"representant\", repOk,\n      repOk ? \"Représentant retrouvé parmi les dirigeants connus\" : \"Représentant non retrouvé\",\n      \"Un dirigeant connu de l'entreprise (registre RNE)\", body.representant || null);\n  }\n  if (unite.statut_diffusion === \"P\" || etab.statut_diffusion_etablissement === \"P\") {\n    push(\"diffusion_partielle\", false, \"Données en diffusion partielle : à vérifier manuellement\", null, null);\n  }\n  base.statut = base.controles.some(c => !c.ok) ? \"a_verifier\" : \"conforme\";\n  base.donnees_api = {\n    siren: unite.siren,\n    nom_raison_sociale: unite.nom_raison_sociale || unite.nom_complet,\n    enseigne: (etab.liste_enseignes && etab.liste_enseignes[0]) || etab.nom_commercial || unite.nom_raison_sociale,\n    adresse: etab.adresse, code_postal: etab.code_postal, commune: etab.libelle_commune,\n    activite_principale: etab.activite_principale,\n    est_entrepreneur_individuel: !!(unite.complements && unite.complements.est_entrepreneur_individuel)\n  };\n  return base;\n}\n\n// Fusion : branche \"true\" = réponse de l'API, branche \"false\" du IF = item de préparation\nconst prep = $('Préparer le contrôle').item.json;\nconst cur = $json;\nlet api = null, apiError = false;\nif (cur && cur.results) api = cur;\nelse if (cur && cur.body && cur.body.results) api = cur.body;\nelse if (cur && cur.error) apiError = true;\nelse if (cur && cur.statusCode && cur.statusCode >= 400) apiError = true;\nconst resultat = buildResultat({ body: prep.body, api: api, apiError: apiError });\nreturn {\n  json: {\n    demande_id: prep.body.demande_id,\n    siret: prep.siret,\n    statut: resultat.statut,\n    controle_siret: resultat,\n    resume: resultat.controles.map(c => (c.ok ? \"✅ \" : \"⚠️ \") + c.label +\n      (c.ok ? \"\" : \" | attendu : \" + (c.attendu || \"—\") + \" | saisi : \" + (c.saisi || \"—\"))).join(\"\\n\")\n  }\n};"
-   },
-   "type": "n8n-nodes-base.code",
-   "typeVersion": 2,
-   "position": [
-    1520,
-    -64
-   ],
-   "id": "823b56ef-7f42-493d-b939-3412243d67a3",
-   "name": "Calculer le résultat du contrôle"
-  },
-  {
-   "parameters": {
-    "method": "PATCH",
-    "url": "=https://api.madeleine-riviera.fr/items/demande_adhesion/{{ $json.demande_id }}",
-    "sendHeaders": true,
-    "headerParameters": {
-     "parameters": [
-      {
-       "name": "Authorization",
-       "value": "=Bearer PLACEHOLDER"
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Le webhook peut fournir le body en objet OU en chaîne (selon Content-Type) : on parse si besoin.\nlet body = $json.body;\nif (typeof body === \"string\") { try { body = JSON.parse(body); } catch (e) { body = null; } }\nif (!body || typeof body !== \"object\" || Array.isArray(body)) body = $json;\nconst siretBrut = String(body.siret || body.numero_siret || body.SIRET || \"\");\nconst siret = siretBrut.replace(/[\\s.\\-]/g, \"\");\nfunction luhnOk(s){let sum=0;for(let i=0;i<s.length;i++){let d=+s[s.length-1-i];if(i%2===1){d*=2;if(d>9)d-=9;}sum+=d;}return sum%10===0;}\nconst siretFormatOk = /^\\d{14}$/.test(siret) && luhnOk(siret);\nreturn {\n  json: {\n    body: {\n      demande_id: body.demande_id || body.id || null,\n      siret: siretBrut,\n      adresse: body.adresse || \"\",\n      representant: body.representant || [body.representant_prenom, body.representant_nom].filter(Boolean).join(\" \"),\n      nom_commercial: body.nom_commercial || \"\",\n      email: body.email || \"\"\n    },\n    siret: siret,\n    siretFormatOk: siretFormatOk\n  }\n};"
       },
-      {
-       "name": "Content-Type",
-       "value": "application/json"
-      }
-     ]
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -192
+      ],
+      "id": "86b27774-a343-4ce5-8937-c0f6d188c9e8",
+      "name": "Préparer le contrôle"
     },
-    "sendBody": true,
-    "specifyBody": "json",
-    "jsonBody": "={ \"controle_siret\": $json.controle_siret }",
-    "options": {
-     "timeout": 10000
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "261840a3-bfc1-4fea-b3d4-23af99644237",
+              "leftValue": "={{ $json.siretFormatOk }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        864,
+        -192
+      ],
+      "id": "0a8eaabb-cfa1-4c39-8e0c-58c29f07d4f1",
+      "name": "Siret au bon format ?"
+    },
+    {
+      "parameters": {
+        "url": "=https://recherche-entreprises.api.gouv.fr/search?q={{ $json.siret }}&per_page=1&minimal=true&include=siege,dirigeants,matching_etablissements,complements",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "madeleine-riviera-site/1.0 (contact: bureau@madeleine-riviera.fr)"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1104,
+        -416
+      ],
+      "id": "22fa47f1-a8bb-41b0-8a59-a97266e666df",
+      "name": "API Recherche d'entreprises (État)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "function normaliser(s) {\n  if (!s) return \"\";\n  return s.toString().normalize(\"NFD\").replace(/[\\u0300-\\u036f]/g, \"\")\n    .toUpperCase().replace(/[^A-Z0-9]/g, \" \").replace(/\\s+/g, \" \").trim();\n}\nfunction luhnOk(siret) {\n  let sum = 0;\n  for (let i = 0; i < siret.length; i++) {\n    let d = parseInt(siret[siret.length - 1 - i], 10);\n    if (i % 2 === 1) { d *= 2; if (d > 9) d -= 9; }\n    sum += d;\n  }\n  return sum % 10 === 0;\n}\nfunction validerSiret(brut) {\n  const s = (brut || \"\").toString().replace(/[\\s.-]/g, \"\");\n  if (!/^\\d{14}$/.test(s)) return { ok: false, siret: s, raison: \"14 chiffres requis\" };\n  if (!luhnOk(s)) return { ok: false, siret: s, raison: \"Clé de contrôle invalide\" };\n  return { ok: true, siret: s };\n}\nfunction trouverEtab(rep, siret) {\n  const r = rep.results && rep.results[0];\n  if (!r) return null;\n  const m = (r.matching_etablissements || []).find(e => e.siret === siret);\n  if (m) return { unite: r, etab: m };\n  if (r.siege && r.siege.siret === siret) return { unite: r, etab: r.siege };\n  return { unite: r, etab: r.siege };\n}\nfunction adresseCorrespond(adresseSaisie, etab) {\n  const a = normaliser(adresseSaisie || \"\");\n  if (!a) return true;\n  const cp = (etab.code_postal || \"\").toString();\n  const commune = normaliser(etab.libelle_commune);\n  const voie = normaliser((etab.libelle_voie || \"\") + \" \" + (etab.numero_voie || \"\"));\n  const cpOk = !cp || a.includes(cp);\n  const communeOk = !commune || a.includes(commune);\n  const voieOk = !voie.trim() || a.includes(normaliser(etab.libelle_voie || \"\")) || a.includes(voie);\n  return cpOk && communeOk && voieOk;\n}\nfunction representantTrouve(repSaisi, unite) {\n  const r = normaliser(repSaisi || \"\");\n  if (!r) return null;\n  const tokens = r.split(\" \").filter(Boolean);\n  const dirigeants = (unite.dirigeants || []).filter(d => d.type_dirigeant === \"personne physique\");\n  const trouve = dirigeants.some(d => {\n    const dn = normaliser(d.nom || \"\");\n    const dp = normaliser(d.prenoms || \"\");\n    if (!dn) return false;\n    if (tokens.length === 1) return dn.includes(tokens[0]) || tokens[0].includes(dn);\n    const dansNom = tokens.some(t => dn.includes(t) || t.includes(dn));\n    const dansPrenoms = !dp || tokens.some(t => dp.includes(t));\n    return dansNom && dansPrenoms;\n  });\n  if (!trouve && unite.complements && unite.complements.est_entrepreneur_individuel) {\n    return tokens.some(t => normaliser(unite.nom_complet || \"\").includes(t));\n  }\n  return trouve;\n}\nfunction buildResultat(input) {\n  const body = input.body || {};\n  const v = validerSiret(body.siret);\n  const base = {\n    effectue_le: new Date().toISOString(),\n    source: \"recherche-entreprises.api.gouv.fr\",\n    siret_controle: v.siret || null,\n    statut: null, controles: [], donnees_api: null\n  };\n  const push = (id, ok, label, attendu, saisi) => {\n    base.controles.push({ id, ok, label, attendu: attendu || null, saisi: saisi || null });\n  };\n  if (!v.ok) {\n    push(\"format_siret\", false, \"Format du SIRET invalide\", \"14 chiffres avec clé de contrôle valide\", body.siret);\n    base.statut = \"a_verifier\";\n    return base;\n  }\n  if (input.apiError || !input.api) {\n    base.statut = \"non_effectue\";\n    base.controles.push({ id: \"api\", ok: false, label: \"API indisponible : contrôle non effectué, vérification manuelle requise\", attendu: null, saisi: null });\n    return base;\n  }\n  const rep = input.api;\n  if (!rep.results || rep.results.length === 0) {\n    push(\"siret_existe\", false, \"SIRET introuvable ou établissement fermé\", \"Un établissement actif correspondant au SIRET saisi\", v.siret);\n    base.statut = \"a_verifier\";\n    return base;\n  }\n  const { unite, etab } = trouverEtab(rep, v.siret);\n  const actif = etab.etat_administratif === \"A\" && !etab.date_fermeture;\n  push(\"etablissement_actif\", actif,\n    actif ? \"Établissement actif\" : \"Établissement fermé\",\n    \"Établissement actif (état A)\",\n    etab.etat_administratif === \"A\" ? \"Actif\" : \"Fermé\" + (etab.date_fermeture ? \" le \" + etab.date_fermeture : \"\"));\n  const estSiege = etab.est_siege === true || (unite.siege && unite.siege.siret === v.siret);\n  const adresseSaisie = body.adresse || \"\";\n  const siegeAilleurs = estSiege && unite.siege && adresseSaisie && !adresseCorrespond(adresseSaisie, unite.siege);\n  push(\"siret_siege\", !siegeAilleurs,\n    siegeAilleurs ? \"SIRET du siège : demander le SIRET du commerce du boulevard\" : \"SIRET d'établissement (hors siège) ou siège à l'adresse saisie\",\n    unite.siege ? unite.siege.adresse : null, adresseSaisie || null);\n  const adrOk = adresseCorrespond(adresseSaisie, etab);\n  push(\"adresse\", adrOk,\n    adrOk ? \"Adresse conforme\" : \"Adresse différente de celle du registre\",\n    etab.adresse || null, adresseSaisie || null);\n  const repOk = representantTrouve(body.representant, unite);\n  if (repOk !== null) {\n    push(\"representant\", repOk,\n      repOk ? \"Représentant retrouvé parmi les dirigeants connus\" : \"Représentant non retrouvé\",\n      \"Un dirigeant connu de l'entreprise (registre RNE)\", body.representant || null);\n  }\n  if (unite.statut_diffusion === \"P\" || etab.statut_diffusion_etablissement === \"P\") {\n    push(\"diffusion_partielle\", false, \"Données en diffusion partielle : à vérifier manuellement\", null, null);\n  }\n  base.statut = base.controles.some(c => !c.ok) ? \"a_verifier\" : \"conforme\";\n  base.donnees_api = {\n    siren: unite.siren,\n    nom_raison_sociale: unite.nom_raison_sociale || unite.nom_complet,\n    enseigne: (etab.liste_enseignes && etab.liste_enseignes[0]) || etab.nom_commercial || unite.nom_raison_sociale,\n    adresse: etab.adresse, code_postal: etab.code_postal, commune: etab.libelle_commune,\n    activite_principale: etab.activite_principale,\n    est_entrepreneur_individuel: !!(unite.complements && unite.complements.est_entrepreneur_individuel)\n  };\n  return base;\n}\n\n// Fusion : branche \"true\" = réponse de l'API, branche \"false\" du IF = item de préparation\nconst prep = $('Préparer le contrôle').item.json;\nconst cur = $json;\nlet api = null, apiError = false;\nif (cur && cur.results) api = cur;\nelse if (cur && cur.body && cur.body.results) api = cur.body;\nelse if (cur && cur.error) apiError = true;\nelse if (cur && cur.statusCode && cur.statusCode >= 400) apiError = true;\nconst resultat = buildResultat({ body: prep.body, api: api, apiError: apiError });\nreturn {\n  json: {\n    demande_id: prep.body.demande_id,\n    siret: prep.siret,\n    statut: resultat.statut,\n    controle_siret: resultat,\n    resume: resultat.controles.map(c => (c.ok ? \"✅ \" : \"⚠️ \") + c.label +\n      (c.ok ? \"\" : \" | attendu : \" + (c.attendu || \"—\") + \" | saisi : \" + (c.saisi || \"—\"))).join(\"\\n\")\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        -176
+      ],
+      "id": "24b71e2e-76a6-4850-8466-dc58b1d334d3",
+      "name": "Calculer le résultat du contrôle"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://site.g3.madeleine-riviera.fr/api/n8n/items/demande_adhesion/{{ $json.demande_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ controle_siret: $json.controle_siret }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1568,
+        -176
+      ],
+      "id": "ecb0c276-0050-4f72-b213-db91f9653d9b",
+      "name": "Écrire le résultat via l'API du site",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: \"bureau@madeleine-riviera.fr\", subject: \"Nouvelle demande d'adhésion — contrôle SIRET : \" + $('Calculer le résultat du contrôle').item.json.statut, text: \"Nouvelle demande d'adhésion reçue — contrôle SIRET : \" + $('Calculer le résultat du contrôle').item.json.statut + \"\\n\\nCommerce : \" + $('Préparer le contrôle').item.json.body.nom_commercial + \"\\nSIRET saisi : \" + $('Calculer le résultat du contrôle').item.json.siret + \"\\nDemande n° : \" + $('Calculer le résultat du contrôle').item.json.demande_id + \"\\n\\nRésultat (informatif, jamais bloquant — décision humaine) :\\n\" + $('Calculer le résultat du contrôle').item.json.resume }) }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1792,
+        -176
+      ],
+      "id": "0f8d2091-376c-4d54-a3c4-235195780afe",
+      "name": "Alerte au bureau (M-02) via API /email",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ recu: true, statut_controle: $('Calculer le résultat du contrôle').item.json.statut, message: \"Demande enregistrée. Le contrôle SIRET est informatif : la décision du bureau reste humaine.\" }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2016,
+        -176
+      ],
+      "id": "d36c6c1a-930c-49ff-ae92-d4bbe9884e9b",
+      "name": "200 - contrôle effectué"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        416,
+        208
+      ],
+      "id": "a033beab-4cd3-4ed4-98c4-99872bdb7e9c",
+      "name": "Erreur détectée"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: \"bureau@madeleine-riviera.fr\", subject: \"⚠️ Échec du workflow n8n : \" + $json.workflow.name, text: \"Un workflow n8n a échoué.\\n\\nWorkflow : \" + $json.workflow.name + \"\\nNœud en erreur : \" + $json.execution.lastNodeExecuted + \"\\nMessage : \" + $json.execution.error.message + \"\\nExécution n° : \" + $json.execution.id + \"\\nLien : \" + $json.execution.url + \"\\n\\nAction à prévoir : ouvrir l'exécution dans n8n et corriger la cause. Le contrôle SIRET de la demande n'a peut-être pas été enregistré : à vérifier dans le back-office.\" }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        640,
+        208
+      ],
+      "id": "ff7144f5-f11b-46f8-8847-0c5603e0d454",
+      "name": "Alerte échec workflow (API /email)"
     }
-   },
-   "type": "n8n-nodes-base.httpRequest",
-   "typeVersion": 4.5,
-   "position": [
-    1744,
-    -64
-   ],
-   "id": "e1eccc2c-335f-4963-838e-9818a8e3835b",
-   "name": "PLACEHOLDER - Écrire le résultat via l'API du site",
-   "onError": "continueRegularOutput"
-  },
-  {
-   "parameters": {
-    "fromEmail": "=site@madeleine-riviera.fr",
-    "toEmail": "=bureau@madeleine-riviera.fr",
-    "subject": "=Nouvelle demande d'adhésion — contrôle SIRET : {{ $('Calculer le résultat du contrôle').item.json.statut }}",
-    "emailFormat": "text",
-    "text": "=Nouvelle demande d'adhésion reçue — contrôle SIRET : {{ $('Calculer le résultat du contrôle').item.json.statut }}\n\nCommerce : {{ $('Préparer le contrôle').item.json.body.nom_commercial }}\nSIRET saisi : {{ $('Calculer le résultat du contrôle').item.json.siret }}\nDemande n° : {{ $('Calculer le résultat du contrôle').item.json.demande_id }}\n\nRésultat (informatif, jamais bloquant — décision humaine) :\n{{ $('Calculer le résultat du contrôle').item.json.resume }}",
-    "options": {}
-   },
-   "type": "n8n-nodes-base.emailSend",
-   "typeVersion": 2.1,
-   "position": [
-    1968,
-    -64
-   ],
-   "id": "2c08911f-36d5-4329-8d33-d202899396c3",
-   "name": "Alerte au bureau (M-02) - PLACEHOLDER SMTP",
-   "webhookId": "19e8c32b-49e3-44a6-a761-7e5ed20585f5",
-   "credentials": {
-    "smtp": {
-     "id": "w2k8Pr5aUQ9oektQ",
-     "name": "SMTP account 4"
+  ],
+  "pinData": {},
+  "connections": {
+    "Réception demande d'adhésion": {
+      "main": [
+        [
+          {
+            "node": "Préparer le contrôle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer le contrôle": {
+      "main": [
+        [
+          {
+            "node": "Siret au bon format ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Siret au bon format ?": {
+      "main": [
+        [
+          {
+            "node": "API Recherche d'entreprises (État)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Calculer le résultat du contrôle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Recherche d'entreprises (État)": {
+      "main": [
+        [
+          {
+            "node": "Calculer le résultat du contrôle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculer le résultat du contrôle": {
+      "main": [
+        [
+          {
+            "node": "Écrire le résultat via l'API du site",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Écrire le résultat via l'API du site": {
+      "main": [
+        [
+          {
+            "node": "Alerte au bureau (M-02) via API /email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alerte au bureau (M-02) via API /email": {
+      "main": [
+        [
+          {
+            "node": "200 - contrôle effectué",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erreur détectée": {
+      "main": [
+        [
+          {
+            "node": "Alerte échec workflow (API /email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
-   },
-   "onError": "continueRegularOutput"
   },
-  {
-   "parameters": {
-    "respondWith": "json",
-    "responseBody": "={\n  \"recu\": true,\n  \"statut_controle\": \"{{ $('Calculer le résultat du contrôle').item.json.statut }}\",\n  \"message\": \"Demande enregistrée. Le contrôle SIRET est informatif : la décision du bureau reste humaine.\"\n}",
-    "options": {
-     "responseCode": 200
-    }
-   },
-   "type": "n8n-nodes-base.respondToWebhook",
-   "typeVersion": 1.5,
-   "position": [
-    2192,
-    -64
-   ],
-   "id": "95139cb4-0a6a-4c14-9012-0f188ca70db8",
-   "name": "Respond to Webhook"
-  }
- ],
- "pinData": {},
- "connections": {
-  "Réception demande d'hadésion": {
-   "main": [
-    [
-     {
-      "node": "Préparer le contrôle",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
-  "Préparer le contrôle": {
-   "main": [
-    [
-     {
-      "node": "Siret au bon format ?",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
   },
-  "Siret au bon format ?": {
-   "main": [
-    [
-     {
-      "node": "API Recherche d'entreprises (État)",
-      "type": "main",
-      "index": 0
-     }
-    ],
-    [
-     {
-      "node": "Calculer le résultat du contrôle",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "API Recherche d'entreprises (État)": {
-   "main": [
-    [
-     {
-      "node": "Calculer le résultat du contrôle",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "Calculer le résultat du contrôle": {
-   "main": [
-    [
-     {
-      "node": "PLACEHOLDER - Écrire le résultat via l'API du site",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "PLACEHOLDER - Écrire le résultat via l'API du site": {
-   "main": [
-    [
-     {
-      "node": "Alerte au bureau (M-02) - PLACEHOLDER SMTP",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  },
-  "Alerte au bureau (M-02) - PLACEHOLDER SMTP": {
-   "main": [
-    [
-     {
-      "node": "Respond to Webhook",
-      "type": "main",
-      "index": 0
-     }
-    ]
-   ]
-  }
- },
- "active": false,
- "settings": {
-  "executionOrder": "v1",
-  "binaryMode": "separate"
- },
- "versionId": "c1916e29-f8ab-459d-b4fa-d007100f605f",
- "meta": {
-  "templateCredsSetupCompleted": true,
-  "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
- },
- "nodeGroups": [],
- "id": "s12iZaO0DVLzvrmc",
- "tags": []
+  "nodeGroups": [],
+  "id": "3f317c4f-8f42-49f8-9980-de2341cfe947",
+  "tags": []
 }

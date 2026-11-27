@@ -1,5 +1,7 @@
 # Guide pas à pas — Workflow n8n « Contrôle SIRET » (Madeleine Riviera)
 
+> **Mise à jour 27/11** : le fichier `workflow-*.json` de ce dossier a été re-pushé avec l'API réelle livrée en clair (`https://site.g3.madeleine-riviera.fr/api/n8n/...`) et les e-mails via `POST /api/n8n/email`. Les secrets restent dans les credentials n8n (id `PLACEHOLDER` dans le repo). HelloAsso reste en sandbox tant que les vrais client_id/secret prod ne sont pas fournis.
+
 Projet : site Madeleine Riviera · Cahier tech v0.5 §5.7 (B-14) · Règle : le contrôle informe le bureau, **jamais bloquant**, le commerçant n'est pas averti.
 
 Chaque bloc de code ci-dessous est à copier tel quel. Les délimiteurs `===== DEBUT ... =====` / `===== FIN ... =====` te permettent de sélectionner facilement un seul bloc.
