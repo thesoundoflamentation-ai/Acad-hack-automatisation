@@ -12,7 +12,7 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 - `guide-etape-par-etape.md` : construction manuelle nœud par nœud + tests de recette
 
 **Placeholder** : tant que l'API du site (Directus) n'est pas livrée par les devs, les appels vers elle passent par des champs marqués `PLACEHOLDER` (URL `https://api.madeleine-riviera.fr`, header `Bearer PLACEHOLDER`) — à remplacer en un seul endroit par workflow quand l'API arrive.
-→ **API livrée le 27/11** : `https://site.g3.madeleine-riviera.fr/api/n8n` — les exports re-pushés le 27/11 (n°5, 7, 8, 11, 12, 14) la contiennent en clair, avec les e-mails via `POST /api/n8n/email` (ce n'est pas un secret). Les **secrets restent dans les credentials n8n**, jamais dans le repo (id `PLACEHOLDER`). Les workflows n°1–4 et n°6 gardent l'URL placeholder jusqu'à leur prochain ré-import avec l'API réelle.
+→ **API livrée le 27/11** : `https://site.g3.madeleine-riviera.fr/api/n8n` — tous les exports appelant l'API du site (n°1, 3, 4, 5, 7, 8, 11, 12, 14, alerte contact) la contiennent en clair, avec les e-mails via `POST /api/n8n/email` (ce n'est pas un secret). Les **secrets restent dans les credentials n8n**, jamais dans le repo (id `PLACEHOLDER`). n°2 et n°6 sont purement e-mail et n'appellent pas l'API du site.
 
 ## Pièges n8n à retenir
 
