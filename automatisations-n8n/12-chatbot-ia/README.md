@@ -4,6 +4,7 @@ Branche : `vibe/chatbot-ia-182b13` (PR #9) — à construire **à la main dans n
 
 Fichiers versionnés dans ce dossier :
 - **`workflow-chatbot.json`** : export n8n final du workflow A (réponse), nettoyé après recette ✅ ;
+- **`workflow-index-ia.json`** : export n8n final du workflow B (indexation), nettoyé après recette ✅ ;
 - **`skill-chatbot.md`** : skill du chatbot (IA-09), déjà injecté tel quel dans le nœud Set `Skill chatbot` du JSON ;
 - **`README.md`** (ce fichier).
 
@@ -276,9 +277,20 @@ Tests B : **I1** upsert d'un contenu (vérifier les lignes dans `ia_index`), **I
 - e-mail `Alerte bureau - quota/repli (IA-08)` en On Error Continue (il est placé après le Respond 200 : un échec SMTP ne doit pas marquer l'exécution en rouge) ;
 - repli : les 3 points d'entrée (embedding KO, 0 extrait, IA KO) convergent vers `Préparer la recherche simple` → `Recherche plein texte` → `200 - réponse simple`, puis `Alerter le bureau ?` n'envoie l'e-mail que si une vraie défaillance est détectée (flag `alerter`).
 
+## Fichier final — workflow B ✅
+
+`workflow-index-ia.json` = ton export « MR - Index IA » nettoyé (22 nœuds, `pinData` vide, zéro `==`, zéro `.first()`, `active: false`, ids neufs) :
+
+- webhook `indexer-contenu` : Header Auth, credential placeholder `MR - secret webhook indexer` ;
+- 2 nœuds Postgres avec credential placeholder `MR - PostgreSQL` ;
+- **bug évité** : `Écrire les vecteurs` passait `lignes_json` (un JSON plein de virgules) dans `queryReplacement`, dont le séparateur est la virgule → le SQL complet est maintenant construit dans `Assembler les lignes` (apostrophes échappées `''`, `jsonb_to_recordset('...'::jsonb)`) et le nœud Postgres reçoit `{{ $json.sql }}`. `Supprimer de l'index` garde `queryReplacement` (2 id simples, sans virgule) ;
+- Never Error ON sur les 4 HTTP ; On Error Continue sur les 3 « Lister » (placeholder Directus) ; `Embedding des extraits` laisse remonter l'erreur (→ Error Trigger → e-mail bureau ; la reconstruction de 3h reprend le contenu) ;
+- cron `0 3 * * *` + **timezone Europe/Paris** (règle 17) ;
+- Respond renommé `200 - résultat indexation` (code 200 ou 400 selon `Construire la réponse`).
+
 ## Livraison
 
-Workflow A fait (CH1–CH3 OK). Quand I1–I2 sont OK sur le workflow B : ⋯ → **Export** de `MR - Index IA` → envoie-moi le JSON (zéro `==`, `pinData` vide, pas de FAUX) → push dans `12-chatbot-ia/workflow-index-ia.json` sur cette branche, puis merge vers `main` (PR #9).
+A + B validés (CH1–CH3, I1–I3) → merge vers `main` (PR #9 à fermer dans l'UI).
 
 ## Checklist après import
 
