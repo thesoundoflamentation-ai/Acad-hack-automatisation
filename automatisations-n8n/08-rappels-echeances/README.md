@@ -1,5 +1,7 @@
 # N°8 — Rappels et échéances (cron quotidien : M-08, M-09 ×2, M-10)
 
+> **Mise à jour 27/11** : le fichier `workflow-*.json` de ce dossier a été re-pushé avec l'API réelle livrée en clair (`https://site.g3.madeleine-riviera.fr/api/n8n/...`) et les e-mails via `POST /api/n8n/email`. Les secrets restent dans les credentials n8n (id `PLACEHOLDER` dans le repo). Cloudflare / HelloAsso restent en placeholder tant que les vrais compte/jetons ne sont pas fournis.
+
 Branche : `vibe/rappels-echeances-182b13` — à construire **à la main dans n8n**, export JSON envoyé pour push ici après validation.
 
 ## Objectif (CdC fonctionnel B-10 / §6.4, CdC tech §7.2 M-08/M-09/M-10, §7.3 tâche quotidienne)
