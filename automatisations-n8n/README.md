@@ -12,6 +12,7 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 - `guide-etape-par-etape.md` : construction manuelle nœud par nœud + tests de recette
 
 **Placeholder** : tant que l'API du site (Directus) n'est pas livrée par les devs, les appels vers elle passent par des champs marqués `PLACEHOLDER` (URL `https://api.madeleine-riviera.fr`, header `Bearer PLACEHOLDER`) — à remplacer en un seul endroit par workflow quand l'API arrive.
+→ **API livrée le 27/11** : `https://site.g3.madeleine-riviera.fr/api/n8n` — les nouveaux exports (à partir de la n°14) la contiennent en clair (ce n'est pas un secret). Les **secrets restent dans les credentials n8n**, jamais dans le repo (id `PLACEHOLDER`). Les workflows n°1–12 gardent l'URL placeholder jusqu'au prochain ré-import avec l'API réelle.
 
 ## Pièges n8n à retenir
 
@@ -39,7 +40,7 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 | 11 | `11-copilote-ia/` | Copilote IA : Workers AI (Llama 3.3 70B) + skill → 2 versions ≤ 300 car. → filtre CP-10 → Directus (version_ia_1/2, alerte_moderation) | ✅ **VALIDÉE** — recette C1–C4 OK ; export final `workflow-copilote-ia.json` (skill réel injecté + anti-injection, webhook **Header Auth** placeholder, Never Error sur l'appel IA, PATCH IA indisponible sur branche false) |
 | 12 | `12-chatbot-ia/` | Chatbot IA : webhook question → embedding bge-m3 → 3 extraits pgvector → Llama 3.3 70B + skill → réponse + liens ; repli recherche plein texte + alerte bureau si quota (IA-01…IA-10) ; index `ia_index` maintenu par Flow Directus + rebuild nightly 3h (Paris) | ✅ **VALIDÉE** — recette CH1–CH3 + I1–I3 OK ; exports nettoyés `workflow-chatbot.json` (skill injecté, Header Auth, Never Error, repli 3 entrées) + `workflow-index-ia.json` (upsert/delete, SQL en littéral, cron 3h Paris) |
 | 13 | `13-bilan-assistant/` | Bilan mensuel B-12 au bureau (questions, sans réponse, jours quota épuisé) | ⏸️ reporté — hors board Excalidraw (décision 27/11) |
-| 14 | `14-newsletter/` | Newsletter (hors MVP, processus Excalidraw) | ⬜ à faire |
+| 14 | `14-newsletter/` | Newsletter : webhook PATCH « Envoyer » (Flow Directus, Header Auth) → liste adhérents actifs `newsletter=true` (e-mails perso+pro dédup) → envoi individuel via API `/api/n8n/email` + journal `envoi_newsletter` | ✅ **VALIDÉE** — recette N1–N3 OK ; export `workflow-newsletter.json` (API réelle `site.g3.madeleine-riviera.fr/api/n8n` en clair, credentials en placeholder, zéro secret) |
 
 ## Celle que le groupe fait seul
 
