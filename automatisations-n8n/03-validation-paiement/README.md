@@ -1,5 +1,7 @@
 # N°3 — Validation par le bureau → lien de paiement (M-04)
 
+> **Mise à jour 27/11** : le fichier `workflow-*.json` de ce dossier a été re-pushé avec l'API réelle livrée en clair (`https://site.g3.madeleine-riviera.fr/api/n8n/...`) et les e-mails via `POST /api/n8n/email`. Les secrets restent dans les credentials n8n (id `PLACEHOLDER` dans le repo). HelloAsso reste en sandbox tant que les vrais client_id/secret prod ne sont pas fournis.
+
 Branche : `vibe/validation-paiement-m04-182b13` — à construire **à la main dans n8n**, export JSON envoyé pour push ici après validation.
 
 ## Objectif (cahier tech v0.5 §5.1 étape 3)
