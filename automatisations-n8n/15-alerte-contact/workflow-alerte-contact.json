@@ -1,0 +1,260 @@
+{
+  "name": "MR - Alerte contact",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "let body = $json.body;\nif (typeof body === \"string\") { try { body = JSON.parse(body); } catch (e) { body = null; } }\nif (!body || typeof body !== \"object\" || Array.isArray(body)) body = $json;\nreturn { json: {\n  id: String(body.id || \"\"),\n  nom: String(body.nom || \"\").replace(/[\\r\\n]+/g, \" \").trim().slice(0, 200),\n  email: String(body.email || \"\").replace(/[\\r\\n]+/g, \" \").trim().slice(0, 200),\n  objet: String(body.objet || \"\").replace(/[\\r\\n]+/g, \" \").trim().slice(0, 200),\n  connu_par: String(body.connu_par || \"\").replace(/[\\r\\n]+/g, \" \").trim().slice(0, 200),\n  message: String(body.message || \"\").trim().slice(0, 5000),\n  present: !!String(body.message || \"\").trim()\n} };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -144
+      ],
+      "id": "08df7f88-7ddc-4a42-8da3-3fbbc2b30737",
+      "name": "Normaliser le message"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "message-contact",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        -144
+      ],
+      "id": "50da544a-5a88-4222-be60-ea2d49f6f39f",
+      "name": "Nouveau message de contact",
+      "webhookId": "f49b3f7e-ecb3-4403-bbd7-5f7c9802e8fc",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - secret webhook contact"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "e3f88764-1291-4ede-974f-d7b9f596b208",
+              "leftValue": "={{ $json.present === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        896,
+        -144
+      ],
+      "id": "5f2747be-4f82-438e-b4ce-aedd57bb856d",
+      "name": "Message présent ?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ erreur: \"message requis\" }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1120,
+        -48
+      ],
+      "id": "72202564-054f-4b3b-87f4-818dea572d55",
+      "name": "400 - message requis"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: \"bureau@madeleine-riviera.fr\", subject: \"Nouveau message de contact — \" + $('Normaliser le message').item.json.objet + \" (\" + $('Normaliser le message').item.json.nom + \")\", text: \"Nouveau message via le formulaire de contact (id \" + $('Normaliser le message').item.json.id + \").\\n\\nNom : \" + $('Normaliser le message').item.json.nom + \"\\nE-mail : \" + $('Normaliser le message').item.json.email + \"\\nObjet : \" + $('Normaliser le message').item.json.objet + \"\\nConnu par : \" + $('Normaliser le message').item.json.connu_par + \"\\n\\nMessage :\\n\" + $('Normaliser le message').item.json.message + \"\\n\\nÀ traiter dans le back-office (messages de contact).\" }) }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        -240
+      ],
+      "id": "40c06dca-e51f-4b36-953a-3e9caec87df9",
+      "name": "Alerte bureau - nouveau message",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - API n8n (header)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ recu: true, id: $('Normaliser le message').item.json.id }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1344,
+        -240
+      ],
+      "id": "aaf55014-2b7d-4b2d-970d-173a6208c944",
+      "name": "200 - reçu"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        464,
+        128
+      ],
+      "id": "0c9bf351-5ec8-43e8-a825-a9126d7b7a70",
+      "name": "Erreur détectée"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: \"bureau@madeleine-riviera.fr\", subject: \"⚠️ Échec du workflow n8n : \" + $json.workflow.name, text: \"Un workflow n8n a échoué.\\n\\nWorkflow : \" + $json.workflow.name + \"\\nNœud en erreur : \" + $json.execution.lastNodeExecuted + \"\\nMessage : \" + $json.execution.error.message + \"\\nExécution n° : \" + $json.execution.id + \"\\nLien : \" + $json.execution.url + \"\\n\\nAction à prévoir : ouvrir l'exécution dans n8n et corriger la cause.\" }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        688,
+        128
+      ],
+      "id": "10a1987d-44fa-498d-8bd5-c7a78d4542a4",
+      "name": "Alerte au bureau (API /email)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - API n8n (header)"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Nouveau message de contact": {
+      "main": [
+        [
+          {
+            "node": "Normaliser le message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliser le message": {
+      "main": [
+        [
+          {
+            "node": "Message présent ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message présent ?": {
+      "main": [
+        [
+          {
+            "node": "Alerte bureau - nouveau message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "400 - message requis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alerte bureau - nouveau message": {
+      "main": [
+        [
+          {
+            "node": "200 - reçu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erreur détectée": {
+      "main": [
+        [
+          {
+            "node": "Alerte au bureau (API /email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
+  },
+  "nodeGroups": [],
+  "id": "03be5a0e-755c-416f-be0c-cc054f7bde22",
+  "tags": []
+}

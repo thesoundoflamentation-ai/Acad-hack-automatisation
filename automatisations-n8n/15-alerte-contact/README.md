@@ -1,6 +1,6 @@
 # Alerte e-mail au bureau — nouveau message de contact (faite seul par le groupe)
 
-Branche : `vibe/alerte-contact-182b13` — à construire **à la main dans n8n** (c'est la dernière, la plus simple), export JSON envoyé pour push ici après validation.
+Branche : `vibe/alerte-contact-182b13` (PR #11) — ✅ **VALIDÉ**, export final nettoyé versionné ici : **`workflow-alerte-contact.json`**.
 
 ## Objectif (CdC fonctionnel A-05, B-07)
 
@@ -89,9 +89,18 @@ Webhook → « Listen for test event » (1 appel par clic, recliquer entre chaqu
 - **M2 — body envoyé en string** (copier le JSON entre quotes dans le `-Body`) → même résultat (parse défensif, règle 1).
 - **M3 — message vide** → 400 `{"erreur":"message requis"}`.
 
+## Fichier final ✅
+
+`workflow-alerte-contact.json` = export « MR - Alerte contact » nettoyé (8 nœuds, `pinData` vide, zéro `==`, `active: false`, ids neufs) :
+
+- webhook `message-contact` : POST + **Header Auth**, credential placeholder `MR - secret webhook contact` ;
+- 2 nœuds HTTP `POST https://site.g3.madeleine-riviera.fr/api/n8n/email` (API réelle en clair) avec `authentication: genericCredentialType` / `httpHeaderAuth`, credential placeholder `MR - API n8n (header)` — **aucun secret en clair** (vérifié) ;
+- Never Error ON sur `Alerte bureau - nouveau message` (On Error Continue, timeout 20 s) ; l'alerte d'erreur du Error Trigger laisse remonter ;
+- branches terminées par Respond : `200 - reçu` et `400 - message requis`.
+
 ## Livraison
 
-Quand M1–M3 sont OK : ⋯ → **Export** → envoie-moi le JSON (zéro `==`, `pinData` vide) → push dans `15-alerte-contact/workflow-alerte-contact.json` sur cette branche, merge vers `main`.
+M1–M3 OK → merge vers `main` (PR #11 à fermer dans l'UI).
 
 ## Checklist après import
 
