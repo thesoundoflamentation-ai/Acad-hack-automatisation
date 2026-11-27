@@ -1,5 +1,7 @@
 # N°5 — Webhook paiement HelloAsso → activation de l'adhésion
 
+> **Mise à jour 27/11** : le fichier `workflow-*.json` de ce dossier a été re-pushé avec l'API réelle livrée en clair (`https://site.g3.madeleine-riviera.fr/api/n8n/...`) et les e-mails via `POST /api/n8n/email`. Les secrets restent dans les credentials n8n (id `PLACEHOLDER` dans le repo). Cloudflare / HelloAsso restent en placeholder tant que les vrais compte/jetons ne sont pas fournis.
+
 Branche : `vibe/webhook-paiement-helloasso-182b13` — à construire **à la main dans n8n**, export JSON envoyé pour push ici après validation.
 
 ## Objectif (cahier tech v0.5 §5.1 étape 5, tests T-07 / T-08, e-mail M-05)
