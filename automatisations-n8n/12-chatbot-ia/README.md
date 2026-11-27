@@ -96,19 +96,12 @@ is true → étape 6. false → étape 10 (repli recherche simple).
 
 ### 6. Postgres `Extraits proches (pgvector)`
 
-Nœud **Postgres**, opération **Execute Query**, credential placeholder `MR - PostgreSQL` (host/base/user/mot de passe de la base Directus — à créer dans Credentials, jamais dans le repo). Requête :
+Nœud **Postgres**, opération **Execute Query**, credential placeholder `MR - PostgreSQL` (host/base/user/mot de passe de la base Directus — à créer dans Credentials, jamais dans le repo).
 
-```sql
-SELECT titre, url, contenu FROM ia_index
-WHERE embedding IS NOT NULL
-ORDER BY embedding <=> $1::vector
-LIMIT 3
-```
-
-Query Replacement (expression, règle 3) :
+⚠️ Pas de champ « Query Replacement » sur ta version → le vecteur passe **en littéral dans la requête** : champ **Query en mode expression** (fx, un seul `=` en tête — règle 3) :
 
 ```
-={{ JSON.stringify($('Embedding de la question').item.json.result.data[0].embedding) }}
+={{ "SELECT titre, url, contenu FROM ia_index WHERE embedding IS NOT NULL ORDER BY embedding <=> '" + JSON.stringify($('Embedding de la question').item.json.result.data[0].embedding) + "'::vector LIMIT 3" }}
 ```
 
 On Error = Continue. (La requête renvoie 1 item par ligne.)
@@ -172,16 +165,13 @@ return { json: { mode: "ia", reponse: reponse.slice(0, 1200), liens: liens } };
 
 ### 13. Postgres `Recherche plein texte` (repli, IA-08)
 
-Execute Query, même credential. Requête :
+Execute Query, même credential. Champ **Query en expression** (pas de Query Replacement ; les apostrophes de la question sont échappées `''`) :
 
-```sql
-SELECT titre, url, contenu FROM ia_index
-WHERE contenu ILIKE '%' || $1 || '%'
-ORDER BY titre
-LIMIT 5
+```
+={{ "SELECT titre, url, contenu FROM ia_index WHERE contenu ILIKE '%' || '" + $('Normaliser la question').item.json.question.replace(/'/g, "''") + "' || '%' ORDER BY titre LIMIT 5" }}
 ```
 
-Query Replacement : `={{ $('Normaliser la question').item.json.question }}`. On Error = Continue.
+On Error = Continue.
 
 ### 14. Code `Assembler réponse simple` — mode **Run Once for All Items**
 
@@ -238,16 +228,25 @@ Seuls les contenus **publics** sont indexés (pas de SIRET, pas d'e-mail, rien d
 { "action": "upsert" | "delete", "source_type": "fiche", "source_id": "F12", "titre": "...", "url": "https://madeleine-riviera.fr/fiche/...", "contenu": "texte complet à indexer" }
 ```
 
-- Code `Normaliser le contenu` (parse défensif) → IF `action = "delete"` → Postgres `Supprimer de l'index` (`DELETE FROM ia_index WHERE source_type = $1 AND source_id = $2`, queryReplacement `={{ $('Normaliser le contenu').item.json.source_type }},{{ ...source_id }}`) → Respond 200 ;
-- branche upsert → Code `Découper en extraits` (chunks de ~800 caractères, chevauchement ~100) → HTTP `Embedding des extraits` (`input: [chunk1, chunk2, ...]` — bge-m3 accepte un tableau) → Postgres `Écrire les vecteurs` :
+- Code `Normaliser le contenu` (parse défensif) → IF `action = "delete"` → Code `SQL suppression` (construit le SQL avec apostrophes échappées `''`) :
 
-```sql
-INSERT INTO ia_index (source_type, source_id, titre, url, contenu, embedding)
-VALUES ($1, $2, $3, $4, $5, $6::vector)
-ON CONFLICT (source_type, source_id, contenu) DO UPDATE SET embedding = EXCLUDED.embedding, titre = EXCLUDED.titre, url = EXCLUDED.url, updated_at = now()
+```javascript
+const c = $('Normaliser le contenu').item.json;
+const esc = (s) => String(s || "").replace(/'/g, "''");
+return { json: { sql: "DELETE FROM ia_index WHERE source_type = '" + esc(c.source_type) + "' AND source_id = '" + esc(c.source_id) + "'" } };
 ```
 
-(ajouter une contrainte unique `(source_type, source_id, contenu)` dans le SQL ci-dessus si vous utilisez ON CONFLICT — ou faire d'abord `DELETE ... WHERE source_type/source_id` puis INSERT, plus simple) → Respond 200 `{"indexe": true}`.
+→ Postgres `Supprimer de l'index` (Execute Query, champ Query en expression : `={{ $json.sql }}`) → Respond 200 `{"indexe": true}` ;
+
+- branche upsert → Code `Découper en extraits` (chunks de ~800 caractères, chevauchement ~100) → HTTP `Embedding des extraits` (`input: [chunk1, chunk2, ...]` — bge-m3 accepte un tableau) → Code `SQL upsert` (par extrait : apostrophes échappées `''`, vecteur en littéral `'" + JSON.stringify(embedding) + "'::vector`) → Postgres `Écrire les vecteurs` (Query = `={{ $json.sql }}`). SQL type :
+
+```sql
+DELETE FROM ia_index WHERE source_type = 'fiche' AND source_id = 'F12';
+INSERT INTO ia_index (source_type, source_id, titre, url, contenu, embedding)
+VALUES ('fiche', 'F12', 'Boulangerie Meme', 'https://...', 'contenu du chunk', '[0.01,0.02,...]'::vector);
+```
+
+→ Respond 200 `{"indexe": true}`.
 
 **B2. Reconstruction nightly** : Schedule Trigger `Tous les jours à 3h` (Timezone Europe/Paris, règle 17) → HTTP GET Directus `https://api.madeleine-riviera.fr/items/fiche?filter[statut][_eq]=publiee&fields=id,nom_commercial,slug,presentation&limit=100` (règle 19 : `limit`, filtres en Send Query Parameters) + idem pages/FAQ → Code `Assembler les contenus` → Split In Batches → pour chaque lot, même chemin que B1 (embedding → upsert). Un contenu retiré entre-temps est supprimé au B1 (Flow Directus).
 
