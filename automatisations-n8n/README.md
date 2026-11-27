@@ -44,4 +44,4 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 
 ## Celle que le groupe fait seul
 
-L'alerte e-mail au bureau sur nouveau message de contact (webhook → e-mail) : la plus simple (3 nœuds), pour prendre en main n8n.
+L'alerte e-mail au bureau sur nouveau message de contact (webhook `message-contact` → e-mail bureau via `POST /api/n8n/email`) : la plus simple, pour prendre en main n8n — dossier `15-alerte-contact/` ✅ **VALIDÉE** (recette M1–M3 OK, export `workflow-alerte-contact.json` : API réelle en clair, credentials placeholder, zéro secret).
