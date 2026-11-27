@@ -3,7 +3,8 @@
 Branche : `vibe/chatbot-ia-182b13` (PR #9) — à construire **à la main dans n8n**, export JSON envoyé pour push ici après validation.
 
 Fichiers versionnés dans ce dossier :
-- **`skill-chatbot.md`** : skill du chatbot (IA-09), à copier tel quel dans le nœud Set `Skill chatbot` ;
+- **`workflow-chatbot.json`** : export n8n final du workflow A (réponse), nettoyé après recette ✅ ;
+- **`skill-chatbot.md`** : skill du chatbot (IA-09), déjà injecté tel quel dans le nœud Set `Skill chatbot` du JSON ;
 - **`README.md`** (ce fichier).
 
 ## Objectif (CdC tech §16.1–16.3, §16.8, exigences IA-01…IA-10)
@@ -263,9 +264,21 @@ Webhook → « Listen for test event » (1 appel par clic), PowerShell une comma
 
 Tests B : **I1** upsert d'un contenu (vérifier les lignes dans `ia_index`), **I2** delete, **I3** cron 3h via ▶ Execute workflow.
 
+## Fichier final — workflow A ✅
+
+`workflow-chatbot.json` = ton export « MR - Chatbot du site » nettoyé (25 nœuds, `pinData` vide, zéro `==`, zéro `.first()`, `active: false`, ids neufs) :
+
+- webhook `Réception question chatbot` : **Header Auth** déjà posée, credential passé en placeholder `MR - secret webhook chatbot` ;
+- les deux nœuds **Postgres** reçoivent le credential placeholder `MR - PostgreSQL` (à créer dans n8n) ;
+- le champ `skill` du Set `Skill chatbot` contient maintenant le **contenu réel de `skill-chatbot.md`** (format JSON `reponse`/`liens` conservé) ;
+- **Never Error ON** sur `Embedding de la question` (timeout 10 s) et `Appel Workers AI (chat)` (timeout 30 s), tous deux en On Error Continue ;
+- `.first()` remplacés par `.item.json` partout (règle 2) ;
+- e-mail `Alerte bureau - quota/repli (IA-08)` en On Error Continue (il est placé après le Respond 200 : un échec SMTP ne doit pas marquer l'exécution en rouge) ;
+- repli : les 3 points d'entrée (embedding KO, 0 extrait, IA KO) convergent vers `Préparer la recherche simple` → `Recherche plein texte` → `200 - réponse simple`, puis `Alerter le bureau ?` n'envoie l'e-mail que si une vraie défaillance est détectée (flag `alerter`).
+
 ## Livraison
 
-Quand CH1–CH3 + I1–I2 sont OK : ⋯ → **Export** des deux workflows → envoie-moi les JSON (zéro `==`, `pinData` vide, pas de FAUX) → push dans `12-chatbot-ia/` sur cette branche, merge vers `main` (PR #9).
+Workflow A fait (CH1–CH3 OK). Quand I1–I2 sont OK sur le workflow B : ⋯ → **Export** de `MR - Index IA` → envoie-moi le JSON (zéro `==`, `pinData` vide, pas de FAUX) → push dans `12-chatbot-ia/workflow-index-ia.json` sur cette branche, puis merge vers `main` (PR #9).
 
 ## Checklist après import
 
