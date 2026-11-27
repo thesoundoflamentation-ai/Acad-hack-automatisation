@@ -13,9 +13,9 @@
       "typeVersion": 2.2,
       "position": [
         -848,
-        0
+        144
       ],
-      "id": "facffda4-c1a2-476f-8acc-caa199d6f33a",
+      "id": "9e0fbe60-7bb6-43d9-a373-7d6fd1c0eb2e",
       "name": "Indexer un contenu",
       "webhookId": "b1000000-0000-4000-8000-0000000000a1",
       "credentials": {
@@ -34,9 +34,9 @@
       "typeVersion": 2,
       "position": [
         -400,
-        0
+        144
       ],
-      "id": "d6ce812f-c6d4-43b6-b9db-afd0a6051c42",
+      "id": "17f51ccb-c1eb-48a0-92c2-33b44c9667b3",
       "name": "Normaliser le contenu"
     },
     {
@@ -50,7 +50,7 @@
           },
           "conditions": [
             {
-              "id": "42481bc1-5bd8-47dc-8525-59f2c5d6c247",
+              "id": "c825586d-464a-44af-9920-3075f05d654a",
               "leftValue": "={{ $json.valide === true }}",
               "rightValue": "",
               "operator": {
@@ -68,9 +68,9 @@
       "typeVersion": 2.4,
       "position": [
         -176,
-        0
+        144
       ],
-      "id": "d5e1a862-4403-47f6-aac7-bc42d4a2a09f",
+      "id": "5c0fac32-000b-4fd1-9bc8-b03a317ee2c7",
       "name": "Requête valide ?"
     },
     {
@@ -84,7 +84,7 @@
           },
           "conditions": [
             {
-              "id": "a9452a39-6520-4148-ad41-9e7cd3151c36",
+              "id": "3ad37591-a5b0-4d84-8d5a-46b3752eaedd",
               "leftValue": "={{ $json.action === \"delete\" }}",
               "rightValue": "",
               "operator": {
@@ -102,9 +102,9 @@
       "typeVersion": 2.4,
       "position": [
         48,
-        -96
+        48
       ],
-      "id": "c1556620-0337-4fcc-ad44-82c1bdc7fece",
+      "id": "8259ea34-111f-4178-b932-ed152c0a2950",
       "name": "Suppression ?"
     },
     {
@@ -119,9 +119,9 @@
       "typeVersion": 2.8,
       "position": [
         272,
-        -288
+        -144
       ],
-      "id": "ead58502-2c9c-4750-a2da-abddf09bfaa1",
+      "id": "1e09554d-53c5-41bb-b36a-b6573588e298",
       "name": "Supprimer de l'index",
       "alwaysOutputData": true,
       "credentials": {
@@ -140,47 +140,31 @@
       "typeVersion": 2,
       "position": [
         272,
-        16
+        160
       ],
-      "id": "bf7836f8-fcbc-4236-9a56-335dea72c2f1",
+      "id": "80dd55fd-5ff9-47e9-adce-fcbf0196d3e2",
       "name": "Découper en extraits"
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.cloudflare.com/client/v4/accounts/PLACEHOLDER_ACCOUNT_ID/ai/v1/embeddings",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer PLACEHOLDER_API_TOKEN"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: \"@cf/baai/bge-m3\", input: $json.textes_embedding }) }}",
         "options": {
-          "timeout": 30000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
+          "timeout": 30000
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
         496,
-        16
+        160
       ],
-      "id": "96d80dcb-1765-430c-aff7-0df215f43d09",
+      "id": "d17d9c04-3f1a-4e33-9b81-ed0854af4cc6",
       "name": "Embedding des extraits"
     },
     {
@@ -192,9 +176,9 @@
       "typeVersion": 2,
       "position": [
         720,
-        16
+        160
       ],
-      "id": "b9979000-b962-4c39-a31f-de849f64aadb",
+      "id": "cb0f6caf-f024-4c83-892a-75f7520f9e95",
       "name": "Assembler les lignes"
     },
     {
@@ -207,9 +191,9 @@
       "typeVersion": 2.8,
       "position": [
         944,
-        16
+        160
       ],
-      "id": "aadd70ff-c176-415d-99dd-366204ad4864",
+      "id": "e4147942-3fe3-48d5-b051-5cb4d4568e00",
       "name": "Écrire les vecteurs",
       "credentials": {
         "postgres": {
@@ -227,9 +211,9 @@
       "typeVersion": 2,
       "position": [
         1168,
-        0
+        144
       ],
-      "id": "a01015eb-80bb-4196-84ce-fdc78ade49ff",
+      "id": "0f7368c6-0870-45f8-9ca0-f6ce4aa7e5d0",
       "name": "Construire la réponse"
     },
     {
@@ -243,7 +227,7 @@
           },
           "conditions": [
             {
-              "id": "11c49820-d1d1-4a0e-8713-c55b71faa4ef",
+              "id": "69fffb03-5841-476a-b1fd-d7fcb8fdf9c4",
               "leftValue": "={{ $('Indexer un contenu').isExecuted }}",
               "rightValue": "",
               "operator": {
@@ -261,9 +245,9 @@
       "typeVersion": 2.4,
       "position": [
         1392,
-        0
+        144
       ],
-      "id": "3207b139-f125-44c6-8f84-9237d58505bf",
+      "id": "fa825bd6-4ff2-4fdc-a2ce-76f6998684b3",
       "name": "Appelé par le webhook ?"
     },
     {
@@ -278,10 +262,10 @@
       "typeVersion": 1.5,
       "position": [
         1616,
-        -96
+        48
       ],
-      "id": "cf53f21a-6e28-42ab-a3f0-b7d4e7b409ed",
-      "name": "200 - résultat indexation"
+      "id": "2b709d63-a4ff-49ee-b353-3d2a28ecca7a",
+      "name": "Respond to Webhook"
     },
     {
       "parameters": {
@@ -302,14 +286,16 @@
       "typeVersion": 1.4,
       "position": [
         -848,
-        480
+        624
       ],
-      "id": "5c861366-2367-408e-8dee-c191461701db",
+      "id": "6e730723-66a0-45d3-b808-c85708dd7969",
       "name": "Tous les jours à 3h"
     },
     {
       "parameters": {
-        "url": "https://api.madeleine-riviera.fr/items/fiche",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/items/fiche",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -331,15 +317,6 @@
             }
           ]
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer PLACEHOLDER"
-            }
-          ]
-        },
         "options": {
           "pagination": {
             "pagination": {
@@ -357,27 +334,23 @@
               "maxRequests": 20
             }
           },
-          "timeout": 15000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
+          "timeout": 15000
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
         -624,
-        480
+        624
       ],
-      "id": "77751e15-9d3a-4568-8a5e-2e97e1040343",
-      "name": "Lister les fiches",
-      "onError": "continueRegularOutput"
+      "id": "64250d3c-fb52-4aa7-9a87-4b4e3d5f71be",
+      "name": "Lister les fiches"
     },
     {
       "parameters": {
-        "url": "https://api.madeleine-riviera.fr/items/page",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/items/page",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -399,15 +372,6 @@
             }
           ]
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer PLACEHOLDER"
-            }
-          ]
-        },
         "options": {
           "pagination": {
             "pagination": {
@@ -425,28 +389,24 @@
               "maxRequests": 20
             }
           },
-          "timeout": 15000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
+          "timeout": 15000
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
         -400,
-        480
+        624
       ],
-      "id": "e81565b4-c3d0-46ab-b620-c54d2d77b745",
+      "id": "4a598bdd-04fc-447e-8ccd-271efbca264c",
       "name": "Lister les pages",
-      "executeOnce": true,
-      "onError": "continueRegularOutput"
+      "executeOnce": true
     },
     {
       "parameters": {
-        "url": "https://api.madeleine-riviera.fr/items/faq",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/items/faq",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendQuery": true,
         "queryParameters": {
           "parameters": [
@@ -468,15 +428,6 @@
             }
           ]
         },
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer PLACEHOLDER"
-            }
-          ]
-        },
         "options": {
           "pagination": {
             "pagination": {
@@ -494,24 +445,18 @@
               "maxRequests": 20
             }
           },
-          "timeout": 15000,
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
+          "timeout": 15000
         }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.5,
       "position": [
         -176,
-        480
+        624
       ],
-      "id": "17edcd34-8196-42a0-be84-8df0279a3de2",
+      "id": "d25e60b0-2041-44c6-ab90-a6e7a96650df",
       "name": "Lister la FAQ",
-      "executeOnce": true,
-      "onError": "continueRegularOutput"
+      "executeOnce": true
     },
     {
       "parameters": {
@@ -521,9 +466,9 @@
       "typeVersion": 2,
       "position": [
         48,
-        480
+        624
       ],
-      "id": "078a6886-d235-4f79-9c1e-7e3c05564e04",
+      "id": "99207973-dbd6-4f56-bbab-d7d71e91cdae",
       "name": "Assembler les contenus"
     },
     {
@@ -534,9 +479,9 @@
       "typeVersion": 3,
       "position": [
         272,
-        480
+        624
       ],
-      "id": "34040065-59fe-48c2-a9be-c8cf176f3581",
+      "id": "f1e4d8c5-81e8-4d27-bd33-ec1f5a10fc10",
       "name": "Un contenu à la fois"
     },
     {
@@ -545,9 +490,9 @@
       "typeVersion": 1,
       "position": [
         496,
-        640
+        784
       ],
-      "id": "cadb55a3-c363-4de4-bed2-b430fa83df01",
+      "id": "996ac305-4e65-4599-8651-aa6433db774f",
       "name": "Fin - reconstruction terminée"
     },
     {
@@ -556,49 +501,46 @@
       "typeVersion": 1,
       "position": [
         -848,
-        880
+        1024
       ],
-      "id": "d33403f1-0590-4f43-bd2b-3b5a63d2d02e",
+      "id": "81b4a328-f956-4140-9741-e5480a14a5d2",
       "name": "Erreur détectée"
     },
     {
       "parameters": {
-        "fromEmail": "=site@madeleine-riviera.fr",
-        "toEmail": "=bureau@madeleine-riviera.fr",
-        "subject": "=⚠️ Échec du workflow n8n : {{ $json.workflow.name }}",
-        "emailFormat": "text",
-        "text": "=Un workflow n8n a échoué.\n\nWorkflow : {{ $json.workflow.name }}\nNœud en erreur : {{ $json.execution.lastNodeExecuted }}\nMessage : {{ $json.execution.error.message }}\nExécution n° : {{ $json.execution.id }}\nLien : {{ $json.execution.url }}\n\nAction à prévoir : ouvrir l'exécution dans n8n et corriger la cause. Un contenu n'a peut-être pas été indexé : le chatbot peut répondre avec des informations anciennes. La reconstruction de 3h le reprendra la nuit suivante.",
-        "options": {}
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: \"bureau@madeleine-riviera.fr\", subject: \"⚠️ Échec du workflow n8n : \" + $json.workflow.name, text: \"Un workflow n8n a échoué.\\n\\nWorkflow : \" + $json.workflow.name + \"\\nNœud en erreur : \" + $json.execution.lastNodeExecuted + \"\\nMessage : \" + $json.execution.error.message + \"\\nExécution n° : \" + $json.execution.id + \"\\nLien : \" + $json.execution.url + \"\\n\\nAction à prévoir : ouvrir l'exécution dans n8n et corriger la cause. Un contenu n'a peut-être pas été indexé : le chatbot peut répondre avec des informations anciennes. La reconstruction de 3h le reprendra la nuit suivante.\" }) }}",
+        "options": {
+          "timeout": 20000
+        }
       },
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
       "position": [
         -624,
-        880
+        1024
       ],
-      "id": "c100b1dd-5a4e-45f5-99cc-8a337c695c4a",
-      "name": "Alerte au bureau - erreur workflow",
-      "webhookId": "b3000000-0000-4000-8000-0000000000a2",
-      "credentials": {
-        "smtp": {
-          "id": "w2k8Pr5aUQ9oektQ",
-          "name": "SMTP account 4"
-        }
-      }
+      "id": "0192f6ed-448d-4abe-a98f-03fbadfdc0a0",
+      "name": "Alerte au bureau - erreur workflow"
     },
     {
       "parameters": {
-        "content": "## Après import\n- Credential **Header Auth** `MR - secret webhook indexer` sur le webhook `Indexer un contenu` (envoyé par la Flow Directus, jamais dans le repo).\n- Credential **Postgres** `MR - PostgreSQL` sur les 2 nœuds Postgres.\n- ⋯ → Settings → **Error workflow** → ce workflow lui-même.\n- SQL devs : table `ia_index` (embedding `vector(1024)`) + `CREATE INDEX ia_index_source ON ia_index (source_type, source_id);`\n- À adapter : collections/champs Directus des nœuds « Lister … », URL des pages/FAQ, et `PREFIXE` dans « Assembler les contenus » = mêmes id que la Flow Directus (sinon doublons dans l'index).",
-        "height": 380,
+        "content": "## SQL à faire exécuter (en plus de la table)\n`CREATE INDEX IF NOT EXISTS ia_index_source ON ia_index (source_type, source_id);`\nAccélère le DELETE par source. Aucune contrainte unique n'est nécessaire : l'écriture supprime puis réinsère en une seule requête.\n\n## À adapter\n- Collections **fiche**, **page** et **faq** exposées par l'API du site, leurs champs et la valeur de statut `publiee` (nœuds « Lister … »).\n- URL des pages et de la FAQ (nœud « Assembler les contenus »).\n- `source_id` : identique à celui envoyé par le site au webhook (PREFIXE).\n- Postgres sur les 2 nœuds Postgres. Remplacer `PLACEHOLDER_ACCOUNT_ID` dans l'URL de « Embedding des extraits ».\n- ⋯ → Settings → Error workflow → ce workflow lui-même.\n\n## Credentials\n- `Header Auth - N8N_API_SECRET` : `Authorization: Bearer <secret>` (listes + alerte)\n- `Header Auth - Cloudflare Workers AI` : `Authorization: Bearer <jeton Cloudflare>`\n- Webhook entrant : credential existant, en-tête `X-Webhook-Secret`",
+        "height": 560,
         "width": 520
       },
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
         -848,
-        1040
+        1184
       ],
-      "id": "ff8e7514-5c72-46f0-8724-ff0ffb97ee16",
+      "id": "5f5400a2-45ba-45d8-8680-c4e2bd0d7e20",
       "name": "Sticky Note"
     }
   ],
@@ -732,7 +674,7 @@
       "main": [
         [
           {
-            "node": "200 - résultat indexation",
+            "node": "Respond to Webhook",
             "type": "main",
             "index": 0
           }
@@ -837,9 +779,10 @@
     "binaryMode": "separate"
   },
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
   },
   "nodeGroups": [],
-  "id": "0cbe82b7-4df5-4ab2-93ac-9e7954a26fbe",
+  "id": "23f47447-ec7b-4c45-8417-d05e85f26aa9",
   "tags": []
 }

@@ -1,5 +1,7 @@
 # N°12 — Chatbot IA (question visiteur → réponse + liens)
 
+> **Mise à jour 27/11** : le fichier `workflow-*.json` de ce dossier a été re-pushé avec l'API réelle livrée en clair (`https://site.g3.madeleine-riviera.fr/api/n8n/...`) et les e-mails via `POST /api/n8n/email`. Les secrets restent dans les credentials n8n (id `PLACEHOLDER` dans le repo). Cloudflare / HelloAsso restent en placeholder tant que les vrais compte/jetons ne sont pas fournis.
+
 Branche : `vibe/chatbot-ia-182b13` (PR #9) — à construire **à la main dans n8n**, export JSON envoyé pour push ici après validation.
 
 Fichiers versionnés dans ce dossier :
