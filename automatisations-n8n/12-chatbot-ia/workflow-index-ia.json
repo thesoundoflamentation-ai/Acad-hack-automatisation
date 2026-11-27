@@ -1,0 +1,845 @@
+{
+  "name": "MR - Index IA",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "indexer-contenu",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -848,
+        0
+      ],
+      "id": "facffda4-c1a2-476f-8acc-caa199d6f33a",
+      "name": "Indexer un contenu",
+      "webhookId": "b1000000-0000-4000-8000-0000000000a1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - secret webhook indexer"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let body = $json.body;\nif (typeof body === \"string\") { try { body = JSON.parse(body); } catch (e) { body = null; } }\nif (!body || typeof body !== \"object\" || Array.isArray(body)) body = $json;\nconst TYPES = [\"fiche\", \"page\", \"faq\"];\n// Texte brut : retire balises HTML, entités courantes et caractères nuls (refusés par PostgreSQL)\nconst nettoyer = (s) => String(s == null ? \"\" : s)\n  .replace(/\\u0000/g, \"\")\n  .replace(/<(script|style)[\\s\\S]*?<\\/\\1>/gi, \" \")\n  .replace(/<[^>]+>/g, \" \")\n  .replace(/&nbsp;/gi, \" \").replace(/&quot;/gi, '\"').replace(/&#39;|&apos;/gi, \"'\")\n  .replace(/&lt;/gi, \"<\").replace(/&gt;/gi, \">\").replace(/&amp;/gi, \"&\")\n  .replace(/[ \\t\\u00a0]+/g, \" \").replace(/\\s*\\n\\s*/g, \"\\n\").trim();\nconst action = String(body.action || \"\").trim().toLowerCase();\nconst source_type = String(body.source_type || \"\").trim().toLowerCase();\nconst source_id = String(body.source_id == null ? \"\" : body.source_id).trim().slice(0, 100);\nconst titre = nettoyer(body.titre).slice(0, 200);\nconst url = String(body.url || \"\").trim().slice(0, 500);\nconst contenu = nettoyer(body.contenu).slice(0, 20000);\nlet erreur = \"\";\nif (![\"upsert\", \"delete\"].includes(action)) erreur = \"action invalide (upsert ou delete attendu)\";\nelse if (!TYPES.includes(source_type)) erreur = \"source_type invalide (fiche, page ou faq attendu)\";\nelse if (!source_id) erreur = \"source_id requis\";\nelse if (url && !/^https:\\/\\/(www\\.)?madeleine-riviera\\.fr\\//.test(url)) erreur = \"url hors du domaine madeleine-riviera.fr\";\n// Un upsert sans contenu revient à retirer l'élément de l'index\nconst vide = !erreur && action === \"upsert\" && !contenu;\nreturn { json: {\n  valide: !erreur, erreur: erreur,\n  action: vide ? \"delete\" : action, vide: vide,\n  source_type: source_type, source_id: source_id,\n  titre: titre, url: url, contenu: contenu\n} };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "id": "d6ce812f-c6d4-43b6-b9db-afd0a6051c42",
+      "name": "Normaliser le contenu"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "42481bc1-5bd8-47dc-8525-59f2c5d6c247",
+              "leftValue": "={{ $json.valide === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -176,
+        0
+      ],
+      "id": "d5e1a862-4403-47f6-aac7-bc42d4a2a09f",
+      "name": "Requête valide ?"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "a9452a39-6520-4148-ad41-9e7cd3151c36",
+              "leftValue": "={{ $json.action === \"delete\" }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        48,
+        -96
+      ],
+      "id": "c1556620-0337-4fcc-ad44-82c1bdc7fece",
+      "name": "Suppression ?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM ia_index WHERE source_type = $1 AND source_id = $2",
+        "options": {
+          "queryReplacement": "={{ $json.source_type }},{{ $json.source_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.8,
+      "position": [
+        272,
+        -288
+      ],
+      "id": "ead58502-2c9c-4750-a2da-abddf09bfaa1",
+      "name": "Supprimer de l'index",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "PLACEHOLDER",
+          "name": "MR - PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const TAILLE = 800, CHEVAUCHEMENT = 100;\nconst texte = String($json.contenu || \"\");\nconst chunks = [];\nlet debut = 0;\nwhile (debut < texte.length) {\n  let fin = Math.min(debut + TAILLE, texte.length);\n  if (fin < texte.length) {\n    // coupure naturelle (fin de phrase ou de ligne) dans les 40 % finaux, sinon à l'espace le plus proche\n    const seuil = Math.floor(TAILLE * 0.6);\n    const zone = texte.slice(debut + seuil, fin);\n    const idx = Math.max(zone.lastIndexOf(\". \"), zone.lastIndexOf(\"! \"), zone.lastIndexOf(\"? \"), zone.lastIndexOf(\"\\n\"));\n    if (idx >= 0) fin = debut + seuil + idx + 1;\n    else {\n      const sp = texte.lastIndexOf(\" \", fin);\n      if (sp > debut + Math.floor(TAILLE * 0.5)) fin = sp;\n    }\n  }\n  const morceau = texte.slice(debut, fin).trim();\n  if (morceau) chunks.push(morceau);\n  if (fin >= texte.length) break;\n  let prochain = fin - CHEVAUCHEMENT;\n  const sp = texte.indexOf(\" \", prochain);\n  if (sp !== -1 && sp < fin) prochain = sp + 1;   // repartir au début d'un mot\n  debut = Math.max(prochain, debut + 1);\n}\n// Le titre est ajouté au texte envoyé au modèle (meilleure pertinence), mais pas au contenu stocké\nconst textes = chunks.map(c => $json.titre ? $json.titre + \"\\n\\n\" + c : c);\nreturn { json: {\n  source_type: $json.source_type, source_id: $json.source_id,\n  titre: $json.titre, url: $json.url,\n  chunks: chunks, textes_embedding: textes, nb: chunks.length\n} };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        16
+      ],
+      "id": "bf7836f8-fcbc-4236-9a56-335dea72c2f1",
+      "name": "Découper en extraits"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.cloudflare.com/client/v4/accounts/PLACEHOLDER_ACCOUNT_ID/ai/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER_API_TOKEN"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: \"@cf/baai/bge-m3\", input: $json.textes_embedding }) }}",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        496,
+        16
+      ],
+      "id": "96d80dcb-1765-430c-aff7-0df215f43d09",
+      "name": "Embedding des extraits"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ctx = $('Découper en extraits').item.json;\nconst r = $json || {};\nconst lire = (arr) => arr.map(x => Array.isArray(x) ? x : (x && x.embedding));\nlet vecs = null;\nif (Array.isArray(r.data)) {\n  // format OpenAI (/ai/v1/embeddings) : [{ embedding, index }] ; format natif : [[...], [...]]\n  const d = r.data.slice();\n  if (d.length && !Array.isArray(d[0]) && d[0] && d[0].index != null) d.sort((a, b) => a.index - b.index);\n  vecs = lire(d);\n} else if (r.result && Array.isArray(r.result.data)) {\n  vecs = lire(r.result.data);\n}\nif (!Array.isArray(vecs) || vecs.length !== ctx.chunks.length) {\n  throw new Error(\"Embeddings reçus : \" + (vecs ? vecs.length : 0) + \", attendus : \" + ctx.chunks.length + \" — réponse : \" + JSON.stringify(r).slice(0, 200));\n}\nfor (const v of vecs) {\n  if (!Array.isArray(v) || v.length !== 1024 || !v.every(x => typeof x === \"number\" && isFinite(x))) {\n    throw new Error(\"Embedding invalide : 1024 nombres attendus (colonne vector(1024))\");\n  }\n}\nconst lignes = ctx.chunks.map((c, i) => ({\n  titre: ctx.titre || null, url: ctx.url || null, contenu: c, embedding: \"[\" + vecs[i].join(\",\") + \"]\"\n}));\nconst lignes_json = JSON.stringify(lignes);\nconst esc = (s) => String(s).replace(/'/g, \"''\");\nconst sql = \"WITH suppression AS (DELETE FROM ia_index WHERE source_type = '\" + esc(ctx.source_type) + \"' AND source_id = '\" + esc(ctx.source_id) + \"') INSERT INTO ia_index (source_type, source_id, titre, url, contenu, embedding) SELECT '\" + esc(ctx.source_type) + \"'::text, '\" + esc(ctx.source_id) + \"'::text, r.titre, r.url, r.contenu, r.embedding::vector FROM jsonb_to_recordset('\" + esc(lignes_json) + \"'::jsonb) AS r(titre text, url text, contenu text, embedding text)\";\nreturn { json: { source_type: ctx.source_type, source_id: ctx.source_id, nb: lignes.length, lignes_json: lignes_json, sql: sql } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        16
+      ],
+      "id": "b9979000-b962-4c39-a31f-de849f64aadb",
+      "name": "Assembler les lignes"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.sql }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.8,
+      "position": [
+        944,
+        16
+      ],
+      "id": "aadd70ff-c176-415d-99dd-366204ad4864",
+      "name": "Écrire les vecteurs",
+      "credentials": {
+        "postgres": {
+          "id": "PLACEHOLDER",
+          "name": "MR - PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const n = $('Normaliser le contenu').item.json;\nif (!n.valide) return { json: { code: 400, corps: { erreur: n.erreur } } };\nif (n.action === \"delete\") {\n  return { json: { code: 200, corps: { supprime: true, source_type: n.source_type, source_id: n.source_id, vide: n.vide } } };\n}\nconst d = $('Assembler les lignes').item.json;\nreturn { json: { code: 200, corps: { indexe: true, nb_extraits: d.nb } } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1168,
+        0
+      ],
+      "id": "a01015eb-80bb-4196-84ce-fdc78ade49ff",
+      "name": "Construire la réponse"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "11c49820-d1d1-4a0e-8713-c55b71faa4ef",
+              "leftValue": "={{ $('Indexer un contenu').isExecuted }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1392,
+        0
+      ],
+      "id": "3207b139-f125-44c6-8f84-9237d58505bf",
+      "name": "Appelé par le webhook ?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.corps) }}",
+        "options": {
+          "responseCode": "={{ $json.code }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1616,
+        -96
+      ],
+      "id": "cf53f21a-6e28-42ab-a3f0-b7d4e7b409ed",
+      "name": "200 - résultat indexation"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 * * *"
+            },
+            {
+              "field": "timezone",
+              "timezone": "Europe/Paris"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -848,
+        480
+      ],
+      "id": "5c861366-2367-408e-8dee-c191461701db",
+      "name": "Tous les jours à 3h"
+    },
+    {
+      "parameters": {
+        "url": "https://api.madeleine-riviera.fr/items/fiche",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[statut][_eq]",
+              "value": "publiee"
+            },
+            {
+              "name": "fields",
+              "value": "id,nom_commercial,slug,presentation"
+            },
+            {
+              "name": "sort",
+              "value": "id"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "page",
+                    "value": "={{ $pageCount + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !Array.isArray($response.body.data) || $response.body.data.length < 100 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 20
+            }
+          },
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -624,
+        480
+      ],
+      "id": "77751e15-9d3a-4568-8a5e-2e97e1040343",
+      "name": "Lister les fiches",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://api.madeleine-riviera.fr/items/page",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[statut][_eq]",
+              "value": "publiee"
+            },
+            {
+              "name": "fields",
+              "value": "id,titre,slug,contenu"
+            },
+            {
+              "name": "sort",
+              "value": "id"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "page",
+                    "value": "={{ $pageCount + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !Array.isArray($response.body.data) || $response.body.data.length < 100 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 20
+            }
+          },
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -400,
+        480
+      ],
+      "id": "e81565b4-c3d0-46ab-b620-c54d2d77b745",
+      "name": "Lister les pages",
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "https://api.madeleine-riviera.fr/items/faq",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[statut][_eq]",
+              "value": "publiee"
+            },
+            {
+              "name": "fields",
+              "value": "id,question,reponse"
+            },
+            {
+              "name": "sort",
+              "value": "id"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "parameters": {
+                "parameters": [
+                  {
+                    "name": "page",
+                    "value": "={{ $pageCount + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !Array.isArray($response.body.data) || $response.body.data.length < 100 }}",
+              "limitPagesFetched": true,
+              "maxRequests": 20
+            }
+          },
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -176,
+        480
+      ],
+      "id": "17edcd34-8196-42a0-be84-8df0279a3de2",
+      "name": "Lister la FAQ",
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ⚠️ Le source_id doit être IDENTIQUE à celui envoyé par la Flow Directus (webhook), sinon l'index contiendra des doublons.\n// Si la Flow envoie par exemple \"F12\" pour la fiche 12, renseigner PREFIXE.fiche = \"F\".\nconst PREFIXE = { fiche: \"\", page: \"\", faq: \"\" };\nconst BASE = \"https://madeleine-riviera.fr\";\nconst lire = (nom) => $(nom).all().flatMap(i => Array.isArray(i.json.data) ? i.json.data : []);\nconst out = [];\nfor (const f of lire(\"Lister les fiches\")) {\n  out.push({ json: { action: \"upsert\", source_type: \"fiche\", source_id: PREFIXE.fiche + String(f.id),\n    titre: f.nom_commercial || \"\", url: f.slug ? BASE + \"/fiche/\" + f.slug : \"\",\n    contenu: [f.nom_commercial, f.presentation].filter(Boolean).join(\"\\n\\n\") } });\n}\nfor (const p of lire(\"Lister les pages\")) {\n  out.push({ json: { action: \"upsert\", source_type: \"page\", source_id: PREFIXE.page + String(p.id),\n    titre: p.titre || \"\", url: p.slug ? BASE + \"/\" + p.slug : \"\",\n    contenu: [p.titre, p.contenu].filter(Boolean).join(\"\\n\\n\") } });\n}\nfor (const q of lire(\"Lister la FAQ\")) {\n  out.push({ json: { action: \"upsert\", source_type: \"faq\", source_id: PREFIXE.faq + String(q.id),\n    titre: q.question || \"\", url: BASE + \"/faq\",\n    contenu: [q.question, q.reponse].filter(Boolean).join(\"\\n\\n\") } });\n}\nif (out.length === 0) throw new Error(\"Aucun contenu publié récupéré : API Directus indisponible ou filtres incorrects\");\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        48,
+        480
+      ],
+      "id": "078a6886-d235-4f79-9c1e-7e3c05564e04",
+      "name": "Assembler les contenus"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        272,
+        480
+      ],
+      "id": "34040065-59fe-48c2-a9be-c8cf176f3581",
+      "name": "Un contenu à la fois"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        496,
+        640
+      ],
+      "id": "cadb55a3-c363-4de4-bed2-b430fa83df01",
+      "name": "Fin - reconstruction terminée"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -848,
+        880
+      ],
+      "id": "d33403f1-0590-4f43-bd2b-3b5a63d2d02e",
+      "name": "Erreur détectée"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=site@madeleine-riviera.fr",
+        "toEmail": "=bureau@madeleine-riviera.fr",
+        "subject": "=⚠️ Échec du workflow n8n : {{ $json.workflow.name }}",
+        "emailFormat": "text",
+        "text": "=Un workflow n8n a échoué.\n\nWorkflow : {{ $json.workflow.name }}\nNœud en erreur : {{ $json.execution.lastNodeExecuted }}\nMessage : {{ $json.execution.error.message }}\nExécution n° : {{ $json.execution.id }}\nLien : {{ $json.execution.url }}\n\nAction à prévoir : ouvrir l'exécution dans n8n et corriger la cause. Un contenu n'a peut-être pas été indexé : le chatbot peut répondre avec des informations anciennes. La reconstruction de 3h le reprendra la nuit suivante.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -624,
+        880
+      ],
+      "id": "c100b1dd-5a4e-45f5-99cc-8a337c695c4a",
+      "name": "Alerte au bureau - erreur workflow",
+      "webhookId": "b3000000-0000-4000-8000-0000000000a2",
+      "credentials": {
+        "smtp": {
+          "id": "w2k8Pr5aUQ9oektQ",
+          "name": "SMTP account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Après import\n- Credential **Header Auth** `MR - secret webhook indexer` sur le webhook `Indexer un contenu` (envoyé par la Flow Directus, jamais dans le repo).\n- Credential **Postgres** `MR - PostgreSQL` sur les 2 nœuds Postgres.\n- ⋯ → Settings → **Error workflow** → ce workflow lui-même.\n- SQL devs : table `ia_index` (embedding `vector(1024)`) + `CREATE INDEX ia_index_source ON ia_index (source_type, source_id);`\n- À adapter : collections/champs Directus des nœuds « Lister … », URL des pages/FAQ, et `PREFIXE` dans « Assembler les contenus » = mêmes id que la Flow Directus (sinon doublons dans l'index).",
+        "height": 380,
+        "width": 520
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -848,
+        1040
+      ],
+      "id": "ff8e7514-5c72-46f0-8724-ff0ffb97ee16",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Indexer un contenu": {
+      "main": [
+        [
+          {
+            "node": "Normaliser le contenu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliser le contenu": {
+      "main": [
+        [
+          {
+            "node": "Requête valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requête valide ?": {
+      "main": [
+        [
+          {
+            "node": "Suppression ?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Construire la réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Suppression ?": {
+      "main": [
+        [
+          {
+            "node": "Supprimer de l'index",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Découper en extraits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supprimer de l'index": {
+      "main": [
+        [
+          {
+            "node": "Construire la réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Découper en extraits": {
+      "main": [
+        [
+          {
+            "node": "Embedding des extraits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding des extraits": {
+      "main": [
+        [
+          {
+            "node": "Assembler les lignes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assembler les lignes": {
+      "main": [
+        [
+          {
+            "node": "Écrire les vecteurs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Écrire les vecteurs": {
+      "main": [
+        [
+          {
+            "node": "Construire la réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire la réponse": {
+      "main": [
+        [
+          {
+            "node": "Appelé par le webhook ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appelé par le webhook ?": {
+      "main": [
+        [
+          {
+            "node": "200 - résultat indexation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Un contenu à la fois",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tous les jours à 3h": {
+      "main": [
+        [
+          {
+            "node": "Lister les fiches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lister les fiches": {
+      "main": [
+        [
+          {
+            "node": "Lister les pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lister les pages": {
+      "main": [
+        [
+          {
+            "node": "Lister la FAQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lister la FAQ": {
+      "main": [
+        [
+          {
+            "node": "Assembler les contenus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assembler les contenus": {
+      "main": [
+        [
+          {
+            "node": "Un contenu à la fois",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Un contenu à la fois": {
+      "main": [
+        [
+          {
+            "node": "Fin - reconstruction terminée",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normaliser le contenu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erreur détectée": {
+      "main": [
+        [
+          {
+            "node": "Alerte au bureau - erreur workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
+  },
+  "nodeGroups": [],
+  "id": "0cbe82b7-4df5-4ab2-93ac-9e7954a26fbe",
+  "tags": []
+}

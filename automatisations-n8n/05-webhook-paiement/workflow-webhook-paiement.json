@@ -1,0 +1,571 @@
+{
+  "name": "MR - Webhook paiement HelloAsso",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "helloasso-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -1120,
+        64
+      ],
+      "id": "14eeb5b0-7fd0-41cf-b234-541fb02a9a15",
+      "name": "Webhook",
+      "webhookId": "77541ca8-384b-418f-91e6-aae01215ec14"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "eb28f8a1-87ed-4069-9d73-2ea3d32124cb",
+              "leftValue": "={{ $json.eventType === \"Payment\" && $json.payment_id !== \"\" }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -672,
+        64
+      ],
+      "id": "5c8fd36a-c65a-4aa8-80e6-ffc11da39700",
+      "name": "Paiement à traiter ?"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.madeleine-riviera.fr/items/evenement_paiement?filter[helloasso_event_id][_eq]={{ $json.payment_id }}&fields=id,statut",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -432,
+        -224
+      ],
+      "id": "11b9c6e5-429e-41f9-8995-511b6bf63ca3",
+      "name": "PLACEHOLDER - Événement déjà traité ?",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "78822c5e-6ee6-4c5f-a771-d9c136e8f253",
+              "leftValue": "={{ $json.data && $json.data.length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -208,
+        -224
+      ],
+      "id": "162bcaa9-00f9-4838-baea-c625ed370e67",
+      "name": "Déjà traité ?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.helloasso-sandbox.com/oauth2/token",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "specifyBody": "string",
+        "body": "grant_type=client_credentials&client_id=PLACEHOLDER&client_secret=PLACEHOLDER",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        16,
+        -128
+      ],
+      "id": "c1e7eb20-5d8f-4f74-9bb2-02d8f19dea27",
+      "name": "Token OAuth2 HelloAsso",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.helloasso-sandbox.com/v5/payments/{{ $json.payment_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Token OAuth2 HelloAsso').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        -128
+      ],
+      "id": "f349ec28-23ec-4f70-ae77-957381cbbe16",
+      "name": "Relire le paiement HelloAsso",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "36dec2e1-b7f1-49c5-8fc6-ebfc144f64fd",
+              "leftValue": "={{ $json.state === \"Authorized\" }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        464,
+        -128
+      ],
+      "id": "94a88d8e-1130-40ca-8d59-e03076ccf1fd",
+      "name": "Paiement autorisé  ?"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.helloasso-sandbox.com/v5/orders/{{ $('Extraire l\\'événement').item.json.order_id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Token OAuth2 HelloAsso').item.json.access_token }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        -288
+      ],
+      "id": "c6d2c412-b02b-4b30-9d66-ecf96d69e237",
+      "name": "Lire la commande HelloAsso",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "let body = $json.body;\nif (typeof body === \"string\") { try { body = JSON.parse(body); } catch (e) { body = null; } }\nif (!body || typeof body !== \"object\" || Array.isArray(body)) body = $json;\nconst data = (body.data && typeof body.data === \"object\" && !Array.isArray(body.data)) ? body.data : {};\nconst meta = (body.metadata && typeof body.metadata === \"object\" && !Array.isArray(body.metadata)) ? body.metadata : {};\nreturn { json: {\n  eventType: String(body.eventType || \"\"),\n  payment_id: data.id != null ? String(data.id) : \"\",\n  order_id: data.orderId != null ? String(data.orderId) : \"\",\n  montant_centimes: (data.amount != null) ? data.amount : null,\n  date_paiement: data.date || \"\",\n  adhesion_id: meta.adhesion_id || \"\",\n  payer_token: meta.payer_token || \"\"\n} };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        64
+      ],
+      "id": "51f86158-0043-4c49-a9ca-0c3db1aea0b1",
+      "name": "Extraire l'événement"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ev = $('Extraire l\\'événement').item.json;\nconst paiement = $('Relire le paiement HelloAsso').item.json || {};\nconst commande = $json || {};\nconst payer = (commande.payer && typeof commande.payer === \"object\") ? commande.payer : {};\nreturn { json: {\n  eventType: ev.eventType,\n  payment_id: ev.payment_id,\n  order_id: ev.order_id,\n  montant_centimes: (ev.montant_centimes != null) ? ev.montant_centimes : ((paiement.amount != null) ? paiement.amount : null),\n  date_paiement: ev.date_paiement || paiement.date || \"\",\n  state_paiement: paiement.state || \"\",\n  adhesion_id: ev.adhesion_id || \"\",\n  payer_token: ev.payer_token || \"\",\n  payer_email: payer.email || \"\",\n  payer_prenom: payer.firstName || \"\",\n  payer_nom: payer.lastName || \"\"\n} };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -288
+      ],
+      "id": "4d04e96b-530a-48f9-ae6d-38f621a912a6",
+      "name": "Assembler le contexte"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.madeleine-riviera.fr/items/evenement_paiement",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"helloasso_event_id\": $json.payment_id, \"helloasso_order_id\": $json.order_id, \"montant_centimes\": $json.montant_centimes, \"date_paiement\": $json.date_paiement, \"adhesion_id\": $json.adhesion_id || null, \"payer_token\": $json.payer_token || null, \"statut\": \"traite\", \"source\": \"webhook_helloasso\" }",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1264,
+        -288
+      ],
+      "id": "b09ccdcb-081b-43c3-8552-8d67374ea44b",
+      "name": "PLACEHOLDER - Enregistrer l'événement de paiement",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## I'm a note \n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/components/sticky-notes/)\n\nPLACEHOLDER — clé unique helloasso_event_id côté Directus (T-07) ; le Flow Directus active règlement + adhésion 12 mois + compte",
+        "height": 464,
+        "width": 512
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        -448
+      ],
+      "id": "71406109-9ef4-4b0b-aafe-eb4c2796c3c7",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "fromEmail": "=site@madeleine-riviera.fr",
+        "toEmail": "={{ $('Assembler le contexte').item.json.payer_email }}",
+        "subject": "=Bienvenue chez Madeleine Riviera — votre adhésion est active",
+        "emailFormat": "text",
+        "text": "=Bonjour {{ $('Assembler le contexte').item.json.payer_prenom }},\n\nVotre paiement de {{ ($('Assembler le contexte').item.json.montant_centimes || 0) / 100 }} € a bien été confirmé.\n\nVotre adhésion à l'association Madeleine Riviera est active pour 12 mois.\n\nActivez votre espace commerçant pour publier votre fiche :\nhttps://madeleine-riviera.fr/activer-compte?jeton=PLACEHOLDER\n\nL'association Madeleine Riviera",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1680,
+        -288
+      ],
+      "id": "eb22e6a9-a021-4039-bf15-49f47e860aa0",
+      "name": "M-05 Bienvenue - PLACEHOLDER SMTP",
+      "webhookId": "119d3951-c616-4885-9ecb-17feee816c82",
+      "credentials": {
+        "smtp": {
+          "id": "w2k8Pr5aUQ9oektQ",
+          "name": "SMTP account 4"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ignore: true, eventType: $('Extraire l\\'événement').item.json.eventType }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -672,
+        384
+      ],
+      "id": "2cb61528-5c0a-4d3d-898f-36c4a91f31cd",
+      "name": "200 - ignoré"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ deja_traite: true, helloasso_event_id: $('Extraire l\\'événement').item.json.payment_id }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -208,
+        -480
+      ],
+      "id": "49fb062c-f02e-4af6-89ff-c7ef4c52b92c",
+      "name": "200 - déjà traité"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ traite: true, helloasso_event_id: $('Assembler le contexte').item.json.payment_id }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1920,
+        -288
+      ],
+      "id": "9594332e-b1d5-4177-b5ee-08cbef8c4db7",
+      "name": "200 - paiement traité"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extraire l'événement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraire l'événement": {
+      "main": [
+        [
+          {
+            "node": "Paiement à traiter ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paiement à traiter ?": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Événement déjà traité ?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "200 - ignoré",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Événement déjà traité ?": {
+      "main": [
+        [
+          {
+            "node": "Déjà traité ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déjà traité ?": {
+      "main": [
+        [
+          {
+            "node": "200 - déjà traité",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Token OAuth2 HelloAsso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Token OAuth2 HelloAsso": {
+      "main": [
+        [
+          {
+            "node": "Relire le paiement HelloAsso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Relire le paiement HelloAsso": {
+      "main": [
+        [
+          {
+            "node": "Paiement autorisé  ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paiement autorisé  ?": {
+      "main": [
+        [
+          {
+            "node": "Lire la commande HelloAsso",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "200 - ignoré",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire la commande HelloAsso": {
+      "main": [
+        [
+          {
+            "node": "Assembler le contexte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assembler le contexte": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Enregistrer l'événement de paiement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Enregistrer l'événement de paiement": {
+      "main": [
+        [
+          {
+            "node": "M-05 Bienvenue - PLACEHOLDER SMTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "M-05 Bienvenue - PLACEHOLDER SMTP": {
+      "main": [
+        [
+          {
+            "node": "200 - paiement traité",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
+  },
+  "nodeGroups": [],
+  "id": "32933e02-b279-4463-8e06-598117918cd0",
+  "tags": []
+}
