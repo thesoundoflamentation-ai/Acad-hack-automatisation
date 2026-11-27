@@ -1,0 +1,780 @@
+{
+  "name": "MR - Rappels et échéances (quotidien)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Rappels et échéances (7h)\nM-08 : relance de paiement. M-09 : rappel de renouvellement. M-10 : adhésion échue.\n\nÀ configurer après import : credential Header Auth `Authorization: Bearer <N8N_API_SECRET>` sur les nœuds API du site.\n\nM-08 et M-09 : le marquage « envoyé » n'a lieu qu'après un envoi réussi ; un échec est repris au passage suivant.\n\nPagination : limit=100 sur les listes.",
+        "height": 300,
+        "width": 440
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -672
+      ],
+      "id": "ca505c2c-60eb-452e-bb1f-8f34173b5eb1",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            },
+            {
+              "field": "timezone",
+              "timezone": "Europe/Paris"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        352,
+        -176
+      ],
+      "id": "bfedc05c-b69c-4491-a96f-e92c77f15cc3",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/items/demande_adhesion",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[statut][_eq]",
+              "value": "en_attente_paiement"
+            },
+            {
+              "name": "fields",
+              "value": "id,email,nom_commercial,payer_token,date_creation,m08_dernier_envoi"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        864,
+        -480
+      ],
+      "id": "6eee73b4-cb45-47e9-9365-5aafa067cf90",
+      "name": "PLACEHOLDER - Demandes en attente de paiement",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - API n8n (header)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $input.item.json;\nif (!Array.isArray(first.data)) throw new Error(\"Réponse inattendue de l'API (champ data absent) : \" + JSON.stringify(first).slice(0, 300));\nconst maintenant = new Date();\nreturn first.data.map(p => {\n  const cree = p.date_creation ? new Date(p.date_creation) : null;\n  const dernier = p.m08_dernier_envoi ? new Date(p.m08_dernier_envoi) : null;\n  const aRelancer = !!cree && !!p.email\n    && (maintenant - cree) > 3 * 86400000\n    && (!dernier || (maintenant - dernier) > 86400000);\n  return {\n    json: {\n      id: String(p.id), email: p.email || \"\", nom_commercial: p.nom_commercial || \"\",\n      payer_token: p.payer_token || \"\", a_relancer: aRelancer\n    },\n    pairedItem: { item: 0 }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        -480
+      ],
+      "id": "364ff29e-b1d0-4f1f-899b-1a9ad6923227",
+      "name": "Déplier demandes"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "3ca1c367-34f9-4cb6-8121-0b9fa53919ce",
+              "leftValue": "={{ $json.a_relancer === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1328,
+        -480
+      ],
+      "id": "133e23d5-c931-48d4-887f-907bcaa96973",
+      "name": "À relancer ?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        -320
+      ],
+      "id": "a47f0159-41c7-49e0-9f73-58923c79e87c",
+      "name": "Fin - pas de relance"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.email, subject: \"Relance — votre cotisation Madeleine Riviera est en attente\", text: \"Bonjour \" + ($json.nom_commercial || \"cher commerçant\") + \",\\n\\nVotre demande d'adhésion (n° \" + $json.id + \") a été validée, mais le paiement n'a pas été effectué.\\n\\nPour régler votre cotisation (100 €, 12 mois) :\\nhttps://site.g3.madeleine-riviera.fr/payer/\" + $json.payer_token + \"\\n\\nL'association Madeleine Riviera\" }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1680,
+        -496
+      ],
+      "id": "316c3623-839c-4687-873e-e578ffadea6e",
+      "name": "M-08 Paiement à finir (API /email)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "cdc3504b-f9f5-413e-a9b9-53058753112f",
+              "leftValue": "={{ $json.statusCode >= 200 && $json.statusCode < 300 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1904,
+        -496
+      ],
+      "id": "e0b9a252-62a0-4a93-af25-623afdcab27a",
+      "name": "M-08 envoyée ?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2112,
+        -384
+      ],
+      "id": "570162a3-0f15-4bbd-9178-6120c7a02ec6",
+      "name": "Fin - M-08 non envoyée (reprise demain)"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://site.g3.madeleine-riviera.fr/api/n8n/items/demande_adhesion/{{ $(\"Déplier demandes\").item.json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ m08_dernier_envoi: $now.toISO() }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2128,
+        -672
+      ],
+      "id": "309a6f48-21a5-4a36-8b18-c16eb7ec9159",
+      "name": "PLACEHOLDER - Marquer M-08 envoyée"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2352,
+        -672
+      ],
+      "id": "8049d9f4-c595-4334-899e-6a6b5fe2f15f",
+      "name": "Fin - relance envoyée"
+    },
+    {
+      "parameters": {
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/items/adhesion",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[statut][_eq]",
+              "value": "active"
+            },
+            {
+              "name": "fields",
+              "value": "id,email,nom_commercial,date_fin,m09_dernier_rappel"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        112
+      ],
+      "id": "b4f212f4-9841-490a-b148-d538e4475d85",
+      "name": "PLACEHOLDER - Adhésions actives"
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $input.item.json;\nif (!Array.isArray(first.data)) throw new Error(\"Réponse inattendue de l'API (champ data absent) : \" + JSON.stringify(first).slice(0, 300));\nconst maintenant = new Date();\nreturn first.data.map(a => {\n  let fin = a.date_fin ? new Date(a.date_fin) : null;\n  // date seule (AAAA-MM-JJ) : l'adhésion court jusqu'à la fin de ce jour\n  if (fin && /^\\d{4}-\\d{2}-\\d{2}$/.test(String(a.date_fin))) fin = new Date(fin.getTime() + 86400000);\n  let action = \"rien\", cible = \"\", jours = null;\n  if (fin && fin < maintenant) {\n    action = \"echue\";\n  } else if (fin && a.email) {\n    jours = Math.ceil((fin - maintenant) / 86400000);\n    if (jours <= 30) { action = \"rappel\"; cible = \"J-30\"; }\n    else if (jours <= 90) { action = \"rappel\"; cible = \"J-90\"; }\n    if (action === \"rappel\" && a.m09_dernier_rappel === cible) action = \"rien\";\n  }\n  return {\n    json: {\n      id: String(a.id), email: a.email || \"\", nom_commercial: a.nom_commercial || \"\",\n      date_fin: a.date_fin || \"\", action, cible, jours_restants: jours\n    },\n    pairedItem: { item: 0 }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        112
+      ],
+      "id": "6700b81c-40ec-4f7b-8de9-fca809069382",
+      "name": "Déplier adhésions"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "e5953919-b24d-48ba-a599-c326738153a2",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "rappel",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "58494ab9-f220-4efd-9c8e-da35c49a9c55",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "echue",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        1344,
+        96
+      ],
+      "id": "6cb4dd0d-1d93-4679-9b5e-b26ab43b2b47",
+      "name": "Quelle action ?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.email, subject: \"Rappel — votre adhésion Madeleine Riviera expire dans \" + $json.jours_restants + \" jours\", text: \"Bonjour \" + ($json.nom_commercial || \"cher commerçant\") + \",\\n\\nVotre adhésion à l'association Madeleine Riviera (adhésion n° \" + $json.id + \") arrive à échéance le \" + $json.date_fin + \" — dans \" + $json.jours_restants + \" jours (\" + $json.cible + \").\\n\\nSans renouvellement, votre fiche passera en « inactive » et sortira de l'annuaire à cette date.\\n\\nPour renouveler (12 mois) : connectez-vous à votre espace commerçant sur madeleine-riviera.fr.\\n\\nL'association Madeleine Riviera\" }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1632,
+        0
+      ],
+      "id": "0d6d5cb3-c68e-4fc9-b284-d9f685d5238c",
+      "name": "M-09 Rappel renouvellement (API /email)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "d2ba78b5-c13c-42ba-a5ac-09143b5919ff",
+              "leftValue": "={{ $json.statusCode >= 200 && $json.statusCode < 300 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1856,
+        0
+      ],
+      "id": "a0dad563-4a90-4956-b727-e1d35cfa0f28",
+      "name": "M-09 envoyée ?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2112,
+        -192
+      ],
+      "id": "b6328d2f-3098-463e-b999-68084ae2145d",
+      "name": "Fin - M-09 non envoyée (reprise demain)"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://site.g3.madeleine-riviera.fr/api/n8n/items/adhesion/{{ $(\"Déplier adhésions\").item.json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ m09_dernier_rappel: $(\"Déplier adhésions\").item.json.cible }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2112,
+        -16
+      ],
+      "id": "1e70f5ea-adce-49dc-84c9-c1c58d31cc34",
+      "name": "PLACEHOLDER - Marquer M-09 envoyée"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://site.g3.madeleine-riviera.fr/api/n8n/items/adhesion/{{ $(\"Déplier adhésions\").item.json.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ statut: \"echue\" }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1632,
+        224
+      ],
+      "id": "c5001bb1-4477-4f19-805b-c344d46128ee",
+      "name": "PLACEHOLDER - Adhésion échue"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $(\"Déplier adhésions\").item.json.email, subject: \"Votre adhésion Madeleine Riviera est arrivée à échéance\", text: \"Bonjour \" + ($(\"Déplier adhésions\").item.json.nom_commercial || \"cher commerçant\") + \",\\n\\nVotre adhésion n° \" + $(\"Déplier adhésions\").item.json.id + \" est arrivée à échéance le \" + $(\"Déplier adhésions\").item.json.date_fin + \".\\n\\nVotre fiche est désormais « inactive » : elle n'est plus visible sur madeleine-riviera.fr. Vos données sont conservées 6 mois.\\n\\nPour remettre votre fiche en ligne, renouvelez depuis votre espace commerçant.\\n\\nL'association Madeleine Riviera\" }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1856,
+        224
+      ],
+      "id": "3099fa8d-6184-4fc6-887f-92237dde4a16",
+      "name": "M-10 Adhésion échue (API /email)"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2336,
+        144
+      ],
+      "id": "c1d12982-d8da-4653-895d-a2169823c525",
+      "name": "Fin - adhésions traitées"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        944,
+        400
+      ],
+      "id": "9e2aa353-e902-45a5-bc76-1d2da3c1e66d",
+      "name": "Erreur détectée"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: \"bureau@madeleine-riviera.fr\", subject: \"⚠️ Échec du workflow n8n : \" + $json.workflow.name, text: \"Un workflow n8n a échoué.\\n\\nWorkflow : \" + $json.workflow.name + \"\\nNœud en erreur : \" + $json.execution.lastNodeExecuted + \"\\nMessage : \" + $json.execution.error.message + \"\\nExécution n° : \" + $json.execution.id + \"\\nLien : \" + $json.execution.url + \"\\n\\nAction à prévoir : ouvrir l'exécution dans n8n, corriger la cause, puis relancer. Les envois déjà effectués ne sont pas rejoués ; ceux qui n'ont pas été faits reprendront au prochain passage quotidien.\" }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1168,
+        400
+      ],
+      "id": "33d83bff-8281-4e94-b176-fb8ffefe5cd5",
+      "name": "Alerte au bureau - erreur workflow",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - API n8n (header)"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Demandes en attente de paiement",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "PLACEHOLDER - Adhésions actives",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Demandes en attente de paiement": {
+      "main": [
+        [
+          {
+            "node": "Déplier demandes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déplier demandes": {
+      "main": [
+        [
+          {
+            "node": "À relancer ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "À relancer ?": {
+      "main": [
+        [
+          {
+            "node": "M-08 Paiement à finir (API /email)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - pas de relance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "M-08 Paiement à finir (API /email)": {
+      "main": [
+        [
+          {
+            "node": "M-08 envoyée ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "M-08 envoyée ?": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Marquer M-08 envoyée",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - M-08 non envoyée (reprise demain)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Marquer M-08 envoyée": {
+      "main": [
+        [
+          {
+            "node": "Fin - relance envoyée",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Adhésions actives": {
+      "main": [
+        [
+          {
+            "node": "Déplier adhésions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déplier adhésions": {
+      "main": [
+        [
+          {
+            "node": "Quelle action ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quelle action ?": {
+      "main": [
+        [
+          {
+            "node": "M-09 Rappel renouvellement (API /email)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PLACEHOLDER - Adhésion échue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - adhésions traitées",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "M-09 Rappel renouvellement (API /email)": {
+      "main": [
+        [
+          {
+            "node": "M-09 envoyée ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "M-09 envoyée ?": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Marquer M-09 envoyée",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fin - M-09 non envoyée (reprise demain)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Marquer M-09 envoyée": {
+      "main": [
+        [
+          {
+            "node": "Fin - adhésions traitées",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Adhésion échue": {
+      "main": [
+        [
+          {
+            "node": "M-10 Adhésion échue (API /email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "M-10 Adhésion échue (API /email)": {
+      "main": [
+        [
+          {
+            "node": "Fin - adhésions traitées",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erreur détectée": {
+      "main": [
+        [
+          {
+            "node": "Alerte au bureau - erreur workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
+  },
+  "nodeGroups": [],
+  "id": "aaa38242-8ad9-41f9-a342-d42103ff9359",
+  "tags": []
+}

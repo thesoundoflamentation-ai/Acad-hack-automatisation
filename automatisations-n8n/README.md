@@ -12,6 +12,7 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 - `guide-etape-par-etape.md` : construction manuelle nœud par nœud + tests de recette
 
 **Placeholder** : tant que l'API du site (Directus) n'est pas livrée par les devs, les appels vers elle passent par des champs marqués `PLACEHOLDER` (URL `https://api.madeleine-riviera.fr`, header `Bearer PLACEHOLDER`) — à remplacer en un seul endroit par workflow quand l'API arrive.
+→ **API livrée le 27/11** : `https://site.g3.madeleine-riviera.fr/api/n8n` — les exports re-pushés le 27/11 (n°5, 7, 8, 11, 12, 14) la contiennent en clair, avec les e-mails via `POST /api/n8n/email` (ce n'est pas un secret). Les **secrets restent dans les credentials n8n**, jamais dans le repo (id `PLACEHOLDER`). Les workflows n°1–4 et n°6 gardent l'URL placeholder jusqu'à leur prochain ré-import avec l'API réelle.
 
 ## Pièges n8n à retenir
 
@@ -22,23 +23,25 @@ Une automatisation à la fois, validée avant de passer à la suivante. Chaque d
 
 ## Index des automatisations (ordre prévu)
 
+> Périmètre revu le 27/11 : seules les automatisations présentes dans le board Excalidraw « AUTOMATISATIONS » sont développées (n°1–8 faites, puis n°11 copilote, n°12 chatbot, n°14 newsletter). n°9, n°10, n°13 sont reportées (⏸️).
+
 | # | Dossier | Automatisation | Statut |
 |---|---|---|---|
-| 1 | `01-controle-siret/` | Contrôle SIRET à la demande d'adhésion (API Recherche d'entreprises, B-14 §5.7) — jamais bloquant, bureau seul averti | 🟡 en test (T1→T5) |
-| 2 | `02-notifications-base/` | E-mails M-01/M-02/M-03 (confirmation demande, alerte bureau, refus avec motif) | à faire |
-| 3 | `03-validation-paiement/` | Validation bureau → adhésion « En attente de paiement » + lien `/payer/{jeton}` + e-mail M-04 | à faire |
-| 4 | `04-checkout-helloasso/` | Création checkout HelloAsso API v5 (100 €, métadonnée id adhésion) | à faire |
-| 5 | `05-webhook-paiement/` | Webhook HelloAsso → relire commande → règlement + adhésion active (12 mois) + compte + e-mail M-05 (idempotent) | à faire |
-| 6 | `06-moderation-fiches/` | Proposition fiche → alerte bureau ; validation → M-06 ; refus → M-07 | à faire |
-| 7 | `07-reconciliation/` | Réconciliation quotidienne HelloAsso (webhooks perdus) | à faire |
-| 8 | `08-rappels-echeances/` | Cron quotidien : relance M-08 (>3 j), rappels M-09 (J-90, J-30), échéance → fiche inactive + M-10 | à faire |
-| 9 | `09-photos/` | Toutes les 5 min : contrôle type réel, ré-encodage (EXIF/GPS supprimés), publication, refus notifié | à faire |
-| 10 | `10-purges-sauvegarde/` | Cron : purges RGPD (messages 1 an, demandes 1 an, comptes échus 6 mois, conversations chatbot 30 j) + dump PG chiffré → S3 + export workflows | à faire |
-| 11 | `11-copilote-ia/` | Correction obligatoire du texte : Workers AI + skill → 2 versions ≤ 300 car. → filtre mots interdits → Directus → alerte rouge si illégal (CP-01…CP-14) | à faire |
-| 12 | `12-chatbot-ia/` | Index pgvector des contenus publics + webhook question → Llama 3.3 70B → réponse + liens ; repli recherche simple si quota (IA-01…IA-09) | à faire |
-| 13 | `13-bilan-assistant/` | Bilan mensuel B-12 au bureau (questions, sans réponse, jours quota épuisé) | à faire |
-| 14 | `14-newsletter/` | Newsletter (hors MVP, processus Excalidraw) | à faire |
+| 1 | `01-controle-siret/` | Contrôle SIRET à la demande d'adhésion (API Recherche d'entreprises, B-14 §5.7) — jamais bloquant, bureau seul averti | ✅ **VALIDÉE** — recette T1→T5 OK dans n8n (T1 conforme ; T2 fermé 2004-05-31 ; T3 siège+adresse ; T4 introuvable ; T5 format sans appel API) + code testé en local |
+| 2 | `02-notifications-base/` | E-mails M-01/M-02/M-03 (confirmation demande, alerte bureau, refus avec motif) | ✅ **VALIDÉE** — recette N1/N2/N3 OK (200 partout, fallback OK, parsing OK); SMTP réel Scaleway à brancher plus tard |
+| 3 | `03-validation-paiement/` | Validation bureau → adhésion « En attente de paiement » + lien `/payer/{jeton}` + e-mail M-04 | ✅ **VALIDÉE** — recette V1/V2 OK (200 + payer_url /payer/{uuid} + montant 100 par défaut)
+| 4 | `04-checkout-helloasso/` | Création checkout HelloAsso API v5 (100 €, métadonnée id adhésion) | ✅ **VALIDÉE** — H1 (404 lien invalide) + H2 (body checkout totalAmount=10000, backRef=D10) OK |
+| 5 | `05-webhook-paiement/` | Webhook HelloAsso → relire commande → règlement + adhésion active (12 mois) + compte + e-mail M-05 (idempotent) | ✅ **VALIDÉE** — recette P1/P2/P3 OK dans n8n (P1 `{"traite":true}` + POST `evenement_paiement` + M-05 ; P2 `{"deja_traite":true}` idempotent ; P3 `{"ignore":true}`) ; export final `workflow-webhook-paiement.json` |
+| 6 | `06-moderation-fiches/` | Proposition fiche → alerte bureau (M-02) ; validation → M-06 ; refus → M-07 | ✅ **VALIDÉE** — recette F1–F4 OK (200 `recu:true` sur les 3 événements + fallback ; e-mails M-02/M-06/M-07 vérifiés dans Executions) ; export `workflow-moderation-fiches.json` |
+| 7 | `07-reconciliation/` | Réconciliation quotidienne HelloAsso (webhooks perdus) + alerte erreur workflow (Error Trigger → e-mail bureau) | ✅ **VALIDÉE** — recette R1–R3 OK (1 seul POST pour le paiement non traité, liste vide OK, Refused ignoré) ; export `workflow-reconciliation.json` |
+| 8 | `08-rappels-echeances/` | Cron quotidien : relance M-08 (J+3 puis tous les 7 j), rappels M-09 (J-90, J-30), échéance → statut echue + M-10 + alerte erreur (Error Trigger) | ✅ **VALIDÉE** — recette E1–E3 OK (M-08 ×1, M-09 ×2, M-10 ×1, rien sinon) ; export `workflow-rappels-echeances.json` |
+| 9 | `09-photos/` | Toutes les 5 min : contrôle type réel, ré-encodage (EXIF/GPS supprimés), publication, refus notifié | ⏸️ reporté — hors board Excalidraw (décision 27/11, à valider avec le bureau) |
+| 10 | `10-purges-sauvegarde/` | Cron : purges RGPD (messages 1 an, demandes 1 an, comptes échus 6 mois, conversations chatbot 30 j) + dump PG chiffré → S3 + export workflows | ⏸️ reporté — hors board Excalidraw (décision 27/11) ; ⚠️ obligations RGPD §6.5 + sauvegarde à ne pas oublier en prod |
+| 11 | `11-copilote-ia/` | Copilote IA : Workers AI (Llama 3.3 70B) + skill → 2 versions ≤ 300 car. → filtre CP-10 → Directus (version_ia_1/2, alerte_moderation) | ✅ **VALIDÉE** — recette C1–C4 OK ; export final `workflow-copilote-ia.json` (skill réel injecté + anti-injection, webhook **Header Auth** placeholder, Never Error sur l'appel IA, PATCH IA indisponible sur branche false) |
+| 12 | `12-chatbot-ia/` | Chatbot IA : webhook question → embedding bge-m3 → 3 extraits pgvector → Llama 3.3 70B + skill → réponse + liens ; repli recherche plein texte + alerte bureau si quota (IA-01…IA-10) ; index `ia_index` maintenu par Flow Directus + rebuild nightly 3h (Paris) | ✅ **VALIDÉE** — recette CH1–CH3 + I1–I3 OK ; exports nettoyés `workflow-chatbot.json` (skill injecté, Header Auth, Never Error, repli 3 entrées) + `workflow-index-ia.json` (upsert/delete, SQL en littéral, cron 3h Paris) |
+| 13 | `13-bilan-assistant/` | Bilan mensuel B-12 au bureau (questions, sans réponse, jours quota épuisé) | ⏸️ reporté — hors board Excalidraw (décision 27/11) |
+| 14 | `14-newsletter/` | Newsletter : webhook PATCH « Envoyer » (Flow Directus, Header Auth) → liste adhérents actifs `newsletter=true` (e-mails perso+pro dédup) → envoi individuel via API `/api/n8n/email` + journal `envoi_newsletter` | ✅ **VALIDÉE** — recette N1–N3 OK ; export `workflow-newsletter.json` (API réelle `site.g3.madeleine-riviera.fr/api/n8n` en clair, credentials en placeholder, zéro secret) |
 
 ## Celle que le groupe fait seul
 
-L'alerte e-mail au bureau sur nouveau message de contact (webhook → e-mail) : la plus simple (3 nœuds), pour prendre en main n8n.
+L'alerte e-mail au bureau sur nouveau message de contact (webhook `message-contact` → e-mail bureau via `POST /api/n8n/email`) : la plus simple, pour prendre en main n8n — dossier `15-alerte-contact/` ✅ **VALIDÉE** (recette M1–M3 OK, export `workflow-alerte-contact.json` : API réelle en clair, credentials placeholder, zéro secret).

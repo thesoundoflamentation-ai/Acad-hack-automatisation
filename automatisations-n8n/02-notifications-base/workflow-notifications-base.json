@@ -1,0 +1,254 @@
+{
+ "name": "MR - Notifications adhésion (M-01/M-03)",
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "evenement-adhesion",
+    "responseMode": "responseNode",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2.2,
+   "position": [
+    -16,
+    -16
+   ],
+   "id": "b61f578c-f718-48be-bcac-645932265a9d",
+   "name": "Réception événement adhésion",
+   "webhookId": "7b289c6e-3f05-4196-8c9a-b8708e720b5e"
+  },
+  {
+   "parameters": {
+    "mode": "runOnceForEachItem",
+    "jsCode": "let body = $json.body;\nif (typeof body === \"string\") { try { body = JSON.parse(body); } catch (e) { body = null; } }\nif (!body || typeof body !== \"object\" || Array.isArray(body)) body = $json;\nreturn {\n  json: {\n    evenement: body.evenement || \"\",\n    demande: (body.demande && typeof body.demande === \"object\") ? body.demande : {},\n    motif: body.motif || \"\"\n  }\n};"
+   },
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    208,
+    -16
+   ],
+   "id": "6ff55f8d-0659-40dc-9a15-f847829b12ed",
+   "name": "Normaliser l'événement"
+  },
+  {
+   "parameters": {
+    "rules": {
+     "values": [
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict",
+         "version": 4
+        },
+        "conditions": [
+         {
+          "leftValue": "={{  $json.evenement }}",
+          "rightValue": "demande_creee",
+          "operator": {
+           "type": "string",
+           "operation": "equals"
+          },
+          "id": "eeaa0178-0212-4bff-8c5b-6c7a5e9dc578"
+         }
+        ],
+        "combinator": "and"
+       }
+      },
+      {
+       "conditions": {
+        "options": {
+         "caseSensitive": true,
+         "leftValue": "",
+         "typeValidation": "strict",
+         "version": 4
+        },
+        "conditions": [
+         {
+          "id": "8a64ae0c-d412-4611-b444-cc5a027e45f8",
+          "leftValue": "={{  $json.evenement }}",
+          "rightValue": "demande_refusee",
+          "operator": {
+           "type": "string",
+           "operation": "equals",
+           "name": "filter.operator.equals"
+          }
+         }
+        ],
+        "combinator": "and"
+       }
+      }
+     ]
+    },
+    "options": {
+     "fallbackOutput": "extra"
+    }
+   },
+   "type": "n8n-nodes-base.switch",
+   "typeVersion": 3.5,
+   "position": [
+    432,
+    -16
+   ],
+   "id": "916844f7-a29a-4045-8b5b-efd17e25b539",
+   "name": "Quel événement ?"
+  },
+  {
+   "parameters": {
+    "fromEmail": "=site@madeleine-riviera.fr",
+    "toEmail": "={{ $json.demande.email }}",
+    "subject": "=Votre demande d'adhésion Madeleine Riviera est bien reçue",
+    "emailFormat": "text",
+    "text": "=Bonjour {{ $json.demande.nom_commercial || \"cher commerçant\" }},\n\nVotre demande d'adhésion à l'association Madeleine Riviera a bien été enregistrée (demande n° {{ $json.demande.id }}).\nElle sera examinée par le bureau : vous recevrez un e-mail avec la décision (validation avec lien de paiement, ou refus avec le motif).\n\nÀ bientôt,\nL'association Madeleine Riviera",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.emailSend",
+   "typeVersion": 2.1,
+   "position": [
+    656,
+    -160
+   ],
+   "id": "e1217163-6ba0-4e8c-afe0-e279d8df34dd",
+   "name": "M-01 Confirmation du commerçant",
+   "webhookId": "21772dc1-bf56-42eb-bcf7-b7fcc4595b3e",
+   "credentials": {
+    "smtp": {
+     "id": "w2k8Pr5aUQ9oektQ",
+     "name": "SMTP account 4"
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "fromEmail": "=site@madeleine-riviera.fr",
+    "toEmail": "={{ $json.demande.email }}",
+    "subject": "=Votre demande d'adhésion n'a pas été retenue",
+    "emailFormat": "text",
+    "text": "=Bonjour {{ $json.demande.nom_commercial || \"cher commerçant\" }},\n\nVotre demande d'adhésion (n° {{ $json.demande.id }}) n'a pas été retenue par le bureau.\n\nMotif : {{ $json.motif }}\n\nVous pouvez corriger votre demande et la renvoyer depuis le site.\n\nL'association Madeleine Riviera",
+    "options": {}
+   },
+   "type": "n8n-nodes-base.emailSend",
+   "typeVersion": 2.1,
+   "position": [
+    656,
+    160
+   ],
+   "id": "e571f4cf-acdb-420b-9110-4ebc652f04d2",
+   "name": "M-03 Refus avec motif",
+   "webhookId": "1df8a939-bd9b-4f6d-b563-03edb90911fc",
+   "credentials": {
+    "smtp": {
+     "id": "w2k8Pr5aUQ9oektQ",
+     "name": "SMTP account 4"
+    }
+   },
+   "onError": "continueRegularOutput"
+  },
+  {
+   "parameters": {
+    "respondWith": "json",
+    "responseBody": "={ \"recu\": true, \"evenement\": \"{{ $json.evenement }}\"}",
+    "options": {
+     "responseCode": 200
+    }
+   },
+   "type": "n8n-nodes-base.respondToWebhook",
+   "typeVersion": 1.5,
+   "position": [
+    1056,
+    -32
+   ],
+   "id": "a3e5f177-0365-4636-ae8b-b5598a09d37b",
+   "name": "Respond to Webhook"
+  }
+ ],
+ "pinData": {},
+ "connections": {
+  "Réception événement adhésion": {
+   "main": [
+    [
+     {
+      "node": "Normaliser l'événement",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Normaliser l'événement": {
+   "main": [
+    [
+     {
+      "node": "Quel événement ?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Quel événement ?": {
+   "main": [
+    [
+     {
+      "node": "M-01 Confirmation du commerçant",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "M-03 Refus avec motif",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Respond to Webhook",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "M-01 Confirmation du commerçant": {
+   "main": [
+    [
+     {
+      "node": "Respond to Webhook",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "M-03 Refus avec motif": {
+   "main": [
+    [
+     {
+      "node": "Respond to Webhook",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "active": false,
+ "settings": {
+  "executionOrder": "v1",
+  "binaryMode": "separate"
+ },
+ "versionId": "0873162c-cf75-48a6-a990-403a2508f4ff",
+ "meta": {
+  "templateCredsSetupCompleted": true,
+  "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
+ },
+ "nodeGroups": [],
+ "id": "ttUd5lUsOc8Ce1Zl",
+ "tags": []
+}

@@ -1,0 +1,490 @@
+{
+  "name": "MR - Newsletter",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "PATCH",
+        "path": "envoi-newsletter",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -192,
+        -80
+      ],
+      "id": "3707551c-eccc-4b16-b84f-7d0213abe6f3",
+      "name": "Envoi newsletter demandé",
+      "webhookId": "9819cc06-984c-4eb3-b6d8-3bbc2d2989fa",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - secret webhook newsletter"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "b8e1f69d-0333-43a9-9007-953dff345837",
+              "leftValue": "={{ $json.valide === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        256,
+        -80
+      ],
+      "id": "00434be7-eaf3-4773-a92e-de191413c236",
+      "name": "Demande valide ?"
+    },
+    {
+      "parameters": {
+        "jsCode": "let body = $json.body;\nif (typeof body === \"string\") { try { body = JSON.parse(body); } catch (e) { body = null; } }\nif (!body || typeof body !== \"object\" || Array.isArray(body)) body = $json;\nconst sujet = String(body.sujet || \"\").trim().slice(0, 200);\nconst texte = String(body.texte || \"\").trim().slice(0, 20000);\nreturn { json: { sujet, texte, valide: !!(sujet && texte) } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        -80
+      ],
+      "id": "5655286e-9c12-474f-8bc4-5823c98ad307",
+      "name": "Normaliser la demande"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ erreur: \"sujet et texte requis\" }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        672,
+        176
+      ],
+      "id": "0f8277fa-4cca-40cd-91ca-79c794637ae7",
+      "name": "400 - demande invalide"
+    },
+    {
+      "parameters": {
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/items/adhesion",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filter[statut][_eq]",
+              "value": "active"
+            },
+            {
+              "name": "filter[newsletter][_eq]",
+              "value": "true"
+            },
+            {
+              "name": "fields",
+              "value": "id,email,email_pro,nom_commercial"
+            },
+            {
+              "name": "limit",
+              "value": "500"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        672,
+        -288
+      ],
+      "id": "c5a05ec2-ff69-47fc-a75b-59a317cc56d2",
+      "name": "PLACEHOLDER - Liste des abonnés",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - API n8n (header)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $input.all()[0].json;\nif (!first || !Array.isArray(first.data)) throw new Error(\"Réponse inattendue de l'API (champ data absent) : \" + JSON.stringify(first).slice(0, 300));\nconst vus = new Set();\nconst out = [];\nfor (const a of first.data) {\n  for (const e of [a.email, a.email_pro]) {\n    const mail = String(e || \"\").trim().toLowerCase();\n    if (mail && mail.includes(\"@\") && !vus.has(mail)) {\n      vus.add(mail);\n      out.push({ json: { email: mail, nom: String(a.nom_commercial || \"\"), adhesion_id: String(a.id || \"\") } });\n    }\n  }\n}\nif (out.length === 0) return [{ json: { _vide: true } }];\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        -288
+      ],
+      "id": "80a7abe0-8054-4abf-a13c-3deb10be1faa",
+      "name": "Déplier les destinataires"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "84b67704-105b-4ca3-935f-2d7acfbb46ed",
+              "leftValue": "={{ $json._vide !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1248,
+        -288
+      ],
+      "id": "5774ed5c-bfa4-4cc3-bf7e-95fb9c584851",
+      "name": "Au moins un abonné ?"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ envoyes: 0, erreurs: 0, remarque: \"aucun abonné newsletter\" }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1616,
+        -80
+      ],
+      "id": "d68b4426-79dc-4474-89fa-8288e065778a",
+      "name": "200 - aucun abonné"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: $json.email, subject: $('Normaliser la demande').item.json.sujet, text: $('Normaliser la demande').item.json.texte + \"\\n\\n---\\nAssociation Madeleine Riviera — boulevard de la Madeleine, Nice.\\nVous recevez ce message car vous avez coché « newsletter » lors de votre adhésion.\\nPour ne plus recevoir la newsletter : répondez « STOP » à ce message ou connectez-vous à votre espace.\\n\" }) }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1616,
+        -400
+      ],
+      "id": "b61a61b1-45f3-44d7-8616-f67c342f79b1",
+      "name": "Envoyer la newsletter (API /email)",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - API n8n (header)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const tous = $input.all().map(i => i.json);\nconst dest = $('Déplier les destinataires').all().map(i => i.json.email);\nconst ok = (x) => !(x && x.error);\nconst envoyes = tous.filter(ok).length;\nconst erreurs = tous.length - envoyes;\nreturn [{ json: {\n  sujet: $('Normaliser la demande').item.json.sujet,\n  envoyes, erreurs, total: tous.length,\n  destinataires: dest.filter((_, i) => ok(tous[i]))\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        -400
+      ],
+      "id": "1b6ff421-d78c-44dc-9136-3a956c163e6c",
+      "name": "Compter les envois"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/items/envoi_newsletter",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ date: $now.toISO(), sujet: $('Compter les envois').item.json.sujet, nb_envoyes: $('Compter les envois').item.json.envoyes, nb_erreurs: $('Compter les envois').item.json.erreurs, statut: \"envoye\", destinataires: $('Compter les envois').item.json.destinataires }) }}",
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2064,
+        -400
+      ],
+      "id": "2770f693-9295-4695-b0b9-9ad423f7e0d2",
+      "name": "PLACEHOLDER - Journal de l'envoi",
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - API n8n (header)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ envoyes: $('Compter les envois').item.json.envoyes, erreurs: $('Compter les envois').item.json.erreurs, total: $('Compter les envois').item.json.total }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2288,
+        -400
+      ],
+      "id": "a4a5344d-75a7-4685-949a-2fa72f4b13d4",
+      "name": "200 - envoi terminé"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -192,
+        368
+      ],
+      "id": "dc5ad691-0244-4423-9133-814c0eee9ded",
+      "name": "Erreur détectée"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://site.g3.madeleine-riviera.fr/api/n8n/email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ to: \"bureau@madeleine-riviera.fr\", subject: \"⚠️ Échec du workflow n8n : \" + $json.workflow.name, text: \"Un workflow n8n a échoué.\\n\\nWorkflow : \" + $json.workflow.name + \"\\nNœud en erreur : \" + $json.execution.lastNodeExecuted + \"\\nMessage : \" + $json.execution.error.message + \"\\nExécution n° : \" + $json.execution.id + \"\\nLien : \" + $json.execution.url + \"\\n\\nAction à prévoir : ouvrir l'exécution dans n8n et corriger la cause. La newsletter n'a peut-être été envoyée qu'en partie : vérifier le journal des envois avant de relancer, pour éviter les doublons.\" }) }}",
+        "options": {
+          "timeout": 20000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        32,
+        368
+      ],
+      "id": "1f4a3f09-4955-4392-9c26-4c44e15cc0aa",
+      "name": "Alerte au bureau (API /email)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "PLACEHOLDER",
+          "name": "MR - API n8n (header)"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Envoi newsletter demandé": {
+      "main": [
+        [
+          {
+            "node": "Normaliser la demande",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Demande valide ?": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Liste des abonnés",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "400 - demande invalide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliser la demande": {
+      "main": [
+        [
+          {
+            "node": "Demande valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Liste des abonnés": {
+      "main": [
+        [
+          {
+            "node": "Déplier les destinataires",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déplier les destinataires": {
+      "main": [
+        [
+          {
+            "node": "Au moins un abonné ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Au moins un abonné ?": {
+      "main": [
+        [
+          {
+            "node": "Envoyer la newsletter (API /email)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "200 - aucun abonné",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer la newsletter (API /email)": {
+      "main": [
+        [
+          {
+            "node": "Compter les envois",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compter les envois": {
+      "main": [
+        [
+          {
+            "node": "PLACEHOLDER - Journal de l'envoi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PLACEHOLDER - Journal de l'envoi": {
+      "main": [
+        [
+          {
+            "node": "200 - envoi terminé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Erreur détectée": {
+      "main": [
+        [
+          {
+            "node": "Alerte au bureau (API /email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "372b50082a62c3517ff341cee75bee9b7f078b80253e2152d4ba71b33e58eedd"
+  },
+  "nodeGroups": [],
+  "id": "059b74db-35b8-4396-84b2-1e27c9edf910",
+  "tags": []
+}
